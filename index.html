@@ -1,0 +1,3013 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>분말 검사 시스템</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* 페이지별 표시/숨김 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* 공통 헤더 */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* 네비게이션 버튼 */
+        .nav-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .nav-btn.secondary {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+        
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* 대시보드 스타일 */
+        .dashboard-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .incomplete-list {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .incomplete-list th,
+        .incomplete-list td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .incomplete-list th {
+            background-color: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .incomplete-list tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .incomplete-list tr:hover {
+            background-color: #e3f2fd;
+            cursor: pointer;
+        }
+        
+        .progress-bar {
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+            padding: 40px;
+            font-style: italic;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.1em;
+            color: #666;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0%, 20% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 400px;
+            max-width: 90%;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .modal-buttons {
+            text-align: right;
+            margin-top: 20px;
+        }
+        
+        .modal-btn {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .modal-btn.cancel {
+            background: #666;
+            color: white;
+        }
+        
+        .modal-btn.primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        /* 검사 입력 스타일 */
+        .inspection-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .info-group {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .info-item {
+            font-size: 1.1em;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            margin-right: 8px;
+        }
+        
+        .inspection-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        
+        .inspection-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .inspection-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .item-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .spec-range {
+            font-size: 0.9em;
+            color: #666;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+        
+        .measurement-inputs {
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center; /* 추가 */
+        }
+
+        .input-group label {
+            flex: 0 0 60px;
+            font-weight: bold;
+            color: #555;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            min-width: 0; /* 추가 - flex 아이템이 축소될 수 있도록 */
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .unit {
+            flex: 0 0 60px;
+            display: flex;
+            align-items: center;
+            color: #666;
+            font-size: 0.9em;
+            white-space: nowrap; /* 추가 - 텍스트 줄바꿈 방지 */
+        }
+        
+        .calculation-result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .avg-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .avg-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .result-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .result-status.pass {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .result-status.fail {
+            background: #f44336;
+            color: white;
+        }
+        
+        .result-status.pending {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .save-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .save-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .save-btn.saved {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+        
+        /* 검사 결과 조회 스타일 */
+        .search-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .search-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+        
+        .search-btn {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            min-width: 1200px;
+        }
+
+        /* 테이블 컨테이너에 스크롤 추가 */
+        .results-container {
+            overflow: auto;
+            max-height: 60vh;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        /* 스크롤바 스타일링 */
+        .results-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .results-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .results-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .results-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* 기본 정보 컬럼들 (검사시간, 검사타입, 분말명, LOT번호, 검사자) */
+        .basic-info-cell {
+            min-width: 120px;
+            white-space: nowrap;
+            padding: 12px 8px;
+            font-size: 0.9em;
+        }
+
+        /* 검사시간 전용 스타일 */
+        .inspection-time-cell {
+            min-width: 100px;
+            font-size: 0.85em;
+        }
+
+        /* 분말명/LOT번호/검사자 셀 스타일 */
+        .info-cell {
+            min-width: 100px;
+            max-width: 150px;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.2;
+        }
+
+        /* 검사 결과 컬럼들 (최종결과부터) - 동일한 너비 */
+        .result-column {
+            min-width: 80px;
+            max-width: 80px;
+            text-align: center;
+            padding: 8px 4px;
+        }
+
+        /* 스크롤바 스타일링 */
+        .results-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .results-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .results-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .results-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .results-table th,
+        .results-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        
+        .results-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .results-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .results-table tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .nav-buttons {
+                flex-direction: column;
+            }
+            
+            .info-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .inspection-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+            }
+            
+            .inspection-items {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-form {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 입도분석 전용 스타일 */
+        .particle-size-inputs {
+            margin-bottom: 20px;
+        }
+
+        .mesh-group {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .mesh-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .mesh-name {
+            font-weight: bold;
+            color: #495057;
+            font-size: 1.1em;
+        }
+
+        .mesh-spec {
+            font-size: 0.9em;
+            color: #6c757d;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .mesh-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .mesh-result .result-status {
+            font-size: 0.8em;
+            padding: 4px 8px;
+        }
+
+        /* 모바일 대응 */
+        @media (max-width: 768px) {
+            .mesh-header {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+            
+            .mesh-result {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+        }
+
+        /* 바코드 스캔 관련 스타일 */
+        .barcode-scanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            display: none;
+        }
+
+        .scanner-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-header {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .scanner-header h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+        }
+
+        .scanner-area {
+            width: 400px;
+            height: 300px;
+            border: 2px solid #fff;
+            position: relative;
+            background: #000;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Quagga 카메라 영상 중앙 정렬 */
+        .scanner-area canvas,
+        .scanner-area video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-area .drawingBuffer {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .scanner-controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .scanner-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        .scanner-btn.close {
+            background: #f44336;
+            color: white;
+        }
+
+        .scanner-btn.manual {
+            background: #2196F3;
+            color: white;
+        }
+
+        /* 최종결과 셀 스타일 추가 (기존 스타일 섹션에 추가) */
+        .final-result-cell {
+            background-color: #fff3cd !important;
+            font-weight: bold;
+            min-width: 80px;
+            max-width: 80px;
+            text-align: center;
+        }
+
+        .final-result-cell .result-status.pass {
+            background: #28a745;
+            color: white;
+        }
+
+        .final-result-cell .result-status.fail {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* 검사 상세 조회 전용 스타일 */
+        .inspection-detail-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: none; /* 호버 효과 제거 */
+        }
+
+        .inspection-detail-card:hover {
+            transform: none; /* 호버 효과 제거 */
+        }
+
+        .detail-input-group input {
+            background-color: #f8f9fa;
+            color: #495057;
+            cursor: not-allowed;
+        }
+
+        .detail-result-display {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #6c757d;
+        }
+
+        .detail-result-display.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .detail-result-display.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .detail-measurement-values {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-value-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .detail-value-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .detail-value-number {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .detail-average {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #495057;
+            margin: 10px 0;
+        }
+
+        /* 입도분석 상세 표시 개선 */
+        .particle-size-inputs .mesh-group {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #6c757d;
+        }
+
+        .particle-size-inputs .mesh-group:hover {
+            background: #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+
+        .particle-size-inputs .mesh-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .particle-size-inputs .mesh-name {
+            font-weight: bold;
+            color: #495057;
+            font-size: 1.1em;
+        }
+
+        .particle-size-inputs .mesh-spec {
+            font-size: 0.9em;
+            color: #6c757d;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .particle-size-inputs .detail-measurement-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .particle-size-inputs .detail-value-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .particle-size-inputs .detail-value-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .particle-size-inputs .detail-value-number {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .particle-size-inputs .mesh-result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        /* 입도분석 전체 결과 스타일 */
+        .particle-size-inputs + .detail-result-display {
+            margin-top: 20px;
+            border-left: 4px solid #28a745;
+            background: #d4edda;
+        }
+
+        .particle-size-inputs + .detail-result-display.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        /* 기존 CSS에 추가 */
+        .spec-range {
+            font-size: 0.9em;
+            color: #666;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .spec-range .spec-info {
+            color: #495057;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        .mesh-spec {
+            font-size: 0.9em;
+            color: #6c757d;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 겉보기밀도 전용 스타일 */
+        .apparent-density-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .apparent-density-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap; /* 추가 - 화면이 작을 때 줄바꿈 */
+        }
+
+        .apparent-density-row label {
+            flex: 0 0 50px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .apparent-density-row input {
+            flex: 1;
+            min-width: 80px; /* 최소 너비 설정 */
+            max-width: 120px; /* 최대 너비 설정 */
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .apparent-density-row .unit {
+            flex: 0 0 40px;
+            font-size: 0.8em;
+            color: #666;
+            text-align: center;
+        }
+
+        .apparent-density-row .calculated-value {
+            flex: 0 0 60px;
+            font-size: 0.8em;
+            color: #333;
+            font-weight: bold;
+            text-align: center;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        /* 모바일 대응 */
+        @media (max-width: 768px) {
+            .apparent-density-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .apparent-density-row input {
+                max-width: none;
+            }
+        }
+
+
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>분말 검사 시스템</h1>
+            <p>Powder Inspection Management System</p>
+        </div>
+        
+        <!-- 네비게이션 -->
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="showPage('dashboard')">대시보드</button>
+            <button class="nav-btn" onclick="showNewInspectionModal()">새 검사 시작</button>
+            <button class="nav-btn" onclick="startBarcodeScanning()" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">바코드 스캔</button>
+            <button class="nav-btn secondary" onclick="showPage('search')">검사결과 조회</button>
+        </div>
+        
+        <!-- 대시보드 페이지 -->
+        <div id="dashboardPage" class="page active">
+            <div class="dashboard-section">
+                <h2 class="section-title">미완료 검사 목록</h2>
+                <button onclick="loadIncompleteInspections()" style="background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; float: right; margin-bottom: 20px;">새로고침</button>
+                <div style="clear: both;"></div>
+                
+                <div id="loadingMessage" class="loading">미완료 검사 목록을 불러오는 중</div>
+                
+                <div id="incompleteInspections" style="display: none;">
+                    <table class="incomplete-list">
+                        <thead>
+                            <tr>
+                                <th>분말명</th>
+                                <th>LOT번호</th>
+                                <th>검사타입</th>
+                                <th>검사자</th>
+                                <th>시작시간</th>
+                                <th>진행률</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inspectionTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="emptyMessage" class="empty-message" style="display: none;">
+                    현재 진행중인 검사가 없습니다.
+                </div>
+            </div>
+        </div>
+        
+        <!-- 검사 입력 페이지 -->
+        <div id="inspectionPage" class="page">
+            <div class="inspection-info">
+                <div class="info-group">
+                    <div class="info-item">
+                        <span class="info-label">분말명:</span>
+                        <span id="inspectionPowderName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">LOT번호:</span>
+                        <span id="inspectionLotNumber">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">검사타입:</span>
+                        <span id="inspectionType">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">검사자:</span>
+                        <span id="inspectionInspector">-</span>
+                    </div>
+                </div>
+                <button class="nav-btn" onclick="showPage('dashboard')">대시보드로 돌아가기</button>
+            </div>
+            
+            <div class="dashboard-section" style="margin-bottom: 20px;">
+                <h3>검사 진행 상황</h3>
+                <div class="progress-bar" style="margin-top: 10px;">
+                    <div class="progress-fill" id="inspectionProgressFill" style="width: 0%"></div>
+                    <div class="progress-text" id="inspectionProgressText">0/0</div>
+                </div>
+            </div>
+            
+            <div class="inspection-items" id="inspectionItems">
+                <!-- 검사 항목들이 동적으로 생성됩니다 -->
+            </div>
+        </div>
+        
+        <!-- 검사 결과 조회 페이지 -->
+        <div id="searchPage" class="page">
+            <div class="search-section">
+                <div class="search-form">
+                    <div class="form-group">
+                        <label for="searchPowderSelect">분말명</label>
+                        <select id="searchPowderSelect">
+                            <option value="">전체</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="searchLotNumber">LOT번호</label>
+                        <input type="text" id="searchLotNumber" placeholder="전체 조회시 비워두세요">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="searchStartDate">시작일</label>
+                        <input type="date" id="searchStartDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="searchEndDate">종료일</label>
+                        <input type="date" id="searchEndDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <button class="search-btn" onclick="executeSearch()">검색</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin: 0;">검사 결과</h2>
+                    <span id="searchResultsCount">검색을 실행해주세요</span>
+                </div>
+                
+                <div id="searchLoadingMessage" style="display: none;" class="loading">
+                    검사 결과를 조회하는 중
+                </div>
+                
+                <div id="searchEmptyResults" class="empty-message" style="display: none;">
+                    <div style="font-size: 3em; margin-bottom: 20px; opacity: 0.5;">📊</div>
+                    <div>조회된 결과가 없습니다.</div>
+                    <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
+                        검색 조건을 변경하여 다시 시도해보세요.
+                    </div>
+                </div>
+                
+                <!-- 검사 결과 표시 부분 수정 -->
+                <div id="searchResults" style="display: none;">
+                    <div class="results-container">
+                        <table class="results-table" id="searchResultsTable">
+                            <thead>
+                                <tr id="searchTableHeader">
+                                    <!-- 동적으로 생성됩니다 -->
+                                </tr>
+                            </thead>
+                            <tbody id="searchTableBody">
+                                <!-- 동적으로 생성됩니다 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 새 검사 시작 모달 -->
+    <div id="newInspectionModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px; color: #333;">새 검사 시작</h3>
+            
+            <div class="form-group">
+                <label>분말명:</label>
+                <select id="modalPowderSelect">
+                    <option value="">선택해주세요</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>LOT번호:</label>
+                <input type="text" id="modalLotNumber" placeholder="LOT번호를 입력하세요">
+            </div>
+            
+            <!-- 기존 검사자 입력 필드를 드롭다운으로 변경 -->
+            <div class="form-group">
+                <label>검사자:</label>
+                <select id="modalInspectorSelect">
+                    <option value="">선택해주세요</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label style="margin-bottom: 10px;">검사타입:</label>
+                <div>
+                    <input type="radio" id="modalDailyCheck" name="modalInspectionType" value="일상점검" checked>
+                    <label for="modalDailyCheck" style="margin-right: 20px; font-weight: normal;">일상점검</label>
+                    <input type="radio" id="modalRegularCheck" name="modalInspectionType" value="정기점검">
+                    <label for="modalRegularCheck" style="font-weight: normal;">정기점검</label>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeNewInspectionModal()">취소</button>
+                <button class="modal-btn primary" onclick="submitNewInspection()">조회(검사시작)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 바코드 스캔 화면 -->
+    <div id="barcodeScanner" class="barcode-scanner">
+        <div class="scanner-container">
+            <div class="scanner-header">
+                <h2>바코드 스캔</h2>
+                <p>바코드를 카메라에 맞춰주세요</p>
+            </div>
+            
+            <div class="scanner-area" id="scannerArea">
+                <!-- 카메라 영상이 여기에 표시됩니다 -->
+            </div>
+            
+            <div class="scanner-controls">
+                <button class="scanner-btn close" onclick="closeBarcodeScanner()">취소</button>
+                <button class="scanner-btn manual" onclick="showManualInput()">수동 입력</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검사 상세 조회 페이지 추가 (기존 페이지들과 동일한 구조) -->
+    <div id="inspectionDetailPage" class="page">
+        <div class="inspection-info">
+            <div class="info-group">
+                <div class="info-item">
+                    <span class="info-label">분말명:</span>
+                    <span id="detailPowderName">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">LOT번호:</span>
+                    <span id="detailLotNumber">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">검사타입:</span>
+                    <span id="detailInspectionType">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">검사자:</span>
+                    <span id="detailInspector">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">검사시간:</span>
+                    <span id="detailInspectionTime">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">최종결과:</span>
+                    <span id="detailFinalResult">-</span>
+                </div>
+            </div>
+            <button class="nav-btn" onclick="showPage('search')">검사결과 조회로 돌아가기</button>
+        </div>
+        
+        <div class="inspection-items" id="inspectionDetailItems">
+            <!-- 검사 항목들이 동적으로 생성됩니다 (읽기 전용) -->
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let currentInspections = [];
+        let currentInspectionData = null;
+        let currentInspectionItems = [];
+        let completedItems = [];
+        let searchResults = [];
+        
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            loadPowderList();
+            loadInspectorList();
+            loadIncompleteInspections();
+            showPage('dashboard'); // 기본 페이지 표시
+        };
+
+        // 페이지 전환 함수
+        function showPage(pageName) {
+            // 모든 페이지 숨기기
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+            
+            // 선택된 페이지 표시
+            const targetPage = document.getElementById(pageName + 'Page');
+            if (targetPage) {
+                targetPage.classList.add('active');
+                
+                // 페이지별 초기화 작업
+                if (pageName === 'search') {
+                    loadSearchPowderList();
+                }
+            }
+        }
+        
+        // 분말 목록 로드
+        function loadPowderList() {
+            google.script.run
+                .withSuccessHandler(function(powders) {
+                    const powderSelect = document.getElementById('modalPowderSelect');
+                    powderSelect.innerHTML = '<option value="">선택해주세요</option>';
+                    
+                    powders.forEach(powder => {
+                        const option = new Option(powder, powder);
+                        powderSelect.add(option);
+                    });
+                })
+                .withFailureHandler(function(error) {
+                    console.error('분말 목록 로드 실패:', error);
+                })
+                .getPowderList();
+        }
+        
+        // 검색용 분말 목록 로드
+        function loadSearchPowderList() {
+            google.script.run
+                .withSuccessHandler(function(powders) {
+                    const searchPowderSelect = document.getElementById('searchPowderSelect');
+                    searchPowderSelect.innerHTML = '<option value="">전체</option>';
+                    
+                    powders.forEach(powder => {
+                        const option = new Option(powder, powder);
+                        searchPowderSelect.add(option);
+                    });
+                })
+                .withFailureHandler(function(error) {
+                    console.error('검색 분말 목록 로드 실패:', error);
+                })
+                .getPowderList();
+        }
+        
+        // 미완료 검사 목록 로드
+        function loadIncompleteInspections() {
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('incompleteInspections').style.display = 'none';
+            document.getElementById('emptyMessage').style.display = 'none';
+            
+            google.script.run
+                .withSuccessHandler(function(inspections) {
+                    currentInspections = inspections;
+                    displayIncompleteInspections(inspections);
+                })
+                .withFailureHandler(function(error) {
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('emptyMessage').innerHTML = '데이터 로드 중 오류가 발생했습니다.';
+                    document.getElementById('emptyMessage').style.display = 'block';
+                    console.error('미완료 검사 로드 실패:', error);
+                })
+                .getIncompleteInspections();
+        }
+        
+        // 미완료 검사 목록 표시
+        function displayIncompleteInspections(inspections) {
+            document.getElementById('loadingMessage').style.display = 'none';
+            
+            if (inspections.length === 0) {
+                document.getElementById('emptyMessage').style.display = 'block';
+                return;
+            }
+            
+            const tbody = document.getElementById('inspectionTableBody');
+            tbody.innerHTML = '';
+            
+            inspections.forEach((inspection, index) => {
+                const row = document.createElement('tr');
+                row.onclick = () => continueInspection(index);
+                
+                const progressParts = inspection.progress.split('/');
+                const completed = parseInt(progressParts[0]);
+                const total = parseInt(progressParts[1]);
+                const percentage = total > 0 ? (completed / total) * 100 : 0;
+                
+                row.innerHTML = `
+                    <td>${inspection.powderName}</td>
+                    <td>${inspection.lotNumber}</td>
+                    <td>${inspection.inspectionType}</td>
+                    <td>${inspection.inspector}</td>
+                    <td>${new Date(inspection.startTime).toLocaleString()}</td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                            <div class="progress-text">${inspection.progress}</div>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('incompleteInspections').style.display = 'block';
+        }
+
+        // Inspector 목록 로드 함수 추가
+        function loadInspectorList() {
+          google.script.run
+            .withSuccessHandler(function(inspectors) {
+              const inspectorSelect = document.getElementById('modalInspectorSelect');
+              inspectorSelect.innerHTML = '<option value="">선택해주세요</option>';
+              
+              inspectors.forEach(inspector => {
+                const option = new Option(inspector, inspector);
+                inspectorSelect.add(option);
+              });
+            })
+            .withFailureHandler(function(error) {
+              console.error('검사자 목록 로드 실패:', error);
+            })
+            .getInspectorList();
+        }
+        
+        // 새 검사 시작 모달 열기
+        function showNewInspectionModal() {
+            document.getElementById('newInspectionModal').style.display = 'block';
+        }
+        
+        // 새 검사 시작 모달 닫기
+        function closeNewInspectionModal() {
+            document.getElementById('newInspectionModal').style.display = 'none';
+            // 입력값 초기화
+            document.getElementById('modalPowderSelect').value = '';
+            document.getElementById('modalLotNumber').value = '';
+            document.getElementById('modalInspectorSelect').value = '';
+            document.getElementById('modalDailyCheck').checked = true;
+        }
+        
+        // 새 검사 시작 제출
+        function submitNewInspection() {
+            const powderName = document.getElementById('modalPowderSelect').value;
+            const lotNumber = document.getElementById('modalLotNumber').value.trim();
+            const inspector = document.getElementById('modalInspectorSelect').value;
+            const inspectionType = document.querySelector('input[name="modalInspectionType"]:checked').value;
+            
+            if (!powderName) {
+                alert('분말명을 선택해주세요.');
+                return;
+            }
+            
+            if (!lotNumber) {
+                alert('LOT번호를 입력해주세요.');
+                return;
+            }
+            
+            if (!inspector) {
+                alert('검사자를 선택해주세요.');
+                return;
+            }
+            
+            // 로딩 표시
+            const submitBtn = document.querySelector('.modal-btn.primary');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '처리중...';
+            submitBtn.disabled = true;
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    
+                    if (result && result.success) {
+                        closeNewInspectionModal();
+                        startInspectionProcess(result);
+                    } else {
+                        alert(result ? result.message : '알 수 없는 오류가 발생했습니다.');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    alert('검사 시작 중 오류가 발생했습니다: ' + error.toString());
+                })
+                .startInspection(powderName, lotNumber, inspectionType, inspector);
+        }
+        
+        // 기존 검사 이어서 하기
+        function continueInspection(index) {
+            const inspection = currentInspections[index];
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        startInspectionProcess(result);
+                    } else {
+                        alert(result ? result.message : '검사 데이터 로드 실패');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('검사 데이터 로드 중 오류가 발생했습니다: ' + error.toString());
+                })
+                .startInspection(inspection.powderName, inspection.lotNumber, inspection.inspectionType, inspection.inspector);
+        }
+        
+        // 검사 프로세스 시작
+        function startInspectionProcess(result) {
+            currentInspectionData = result.data;
+            currentInspectionItems = result.items;
+            completedItems = currentInspectionData.completedItems || [];
+            
+            // 검사 정보 표시
+            document.getElementById('inspectionPowderName').textContent = currentInspectionData.powderName;
+            document.getElementById('inspectionLotNumber').textContent = currentInspectionData.lotNumber;
+            document.getElementById('inspectionType').textContent = currentInspectionData.inspectionType;
+            document.getElementById('inspectionInspector').textContent = currentInspectionData.inspector;
+            
+            // 검사 항목 표시
+            displayInspectionItems();
+            updateInspectionProgress();
+            
+            // 검사 페이지로 이동
+            showPage('inspection');
+        }
+        
+        // 검사 항목 표시
+        function displayInspectionItems() {
+            const container = document.getElementById('inspectionItems');
+            container.innerHTML = '';
+            
+            currentInspectionItems.forEach(item => {
+                const card = createInspectionCard(item);
+                container.appendChild(card);
+            });
+        }
+        
+        // 검사 카드 생성
+        function createInspectionCard(item) {
+            const isCompleted = completedItems.includes(item.name);
+            
+            const card = document.createElement('div');
+            card.className = 'inspection-card';
+            card.id = `card-${item.name}`;
+
+            // 겉보기밀도 전용 카드 생성 추가
+            if (item.name === 'ApparentDensity') {
+                return createApparentDensityCard(item, isCompleted);
+            }
+
+            // ParticleSize 전용 카드 생성
+            if (item.isParticleSize) {
+                return createParticleSizeCard(item, isCompleted);
+            }
+                     
+            
+            const specRange = (item.min !== '' && item.max !== '') ? 
+                `${item.min} ~ ${item.max}` :
+                (item.min !== '' ? `≥ ${item.min}` : `≤ ${item.max}`);
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                    <div class="spec-range">${specRange} ${item.unit}</div>
+                </div>
+                
+                <div class="measurement-inputs">
+                    <div class="input-group">
+                        <label>1차:</label>
+                        <input type="number" step="any" id="${item.name}-1" 
+                               oninput="calculateAverage('${item.name}')"
+                               ${isCompleted ? 'disabled' : ''}>
+                        <div class="unit">${item.unit}</div>
+                    </div>
+                    <div class="input-group">
+                        <label>2차:</label>
+                        <input type="number" step="any" id="${item.name}-2" 
+                               oninput="calculateAverage('${item.name}')"
+                               ${isCompleted ? 'disabled' : ''}>
+                        <div class="unit">${item.unit}</div>
+                    </div>
+                    <div class="input-group">
+                        <label>3차:</label>
+                        <input type="number" step="any" id="${item.name}-3" 
+                               oninput="calculateAverage('${item.name}')"
+                               ${isCompleted ? 'disabled' : ''}>
+                        <div class="unit">${item.unit}</div>
+                    </div>
+                </div>
+                
+                <div class="calculation-result">
+                    <div class="avg-result">
+                        <div>
+                            <strong>평균값: </strong>
+                            <span class="avg-value" id="${item.name}-avg">-</span>
+                            <span style="color: #666; font-size: 0.9em;">${item.unit}</span>
+                        </div>
+                        <div class="result-status pending" id="${item.name}-result">대기중</div>
+                    </div>
+                </div>
+                
+                <button class="save-btn ${isCompleted ? 'saved' : ''}" 
+                        id="${item.name}-save" 
+                        onclick="saveInspectionItem('${item.name}')"
+                        ${isCompleted ? 'disabled' : ''}>
+                    ${isCompleted ? '저장완료' : '저장'}
+                </button>
+            `;
+            
+            return card;
+        }
+        
+        // 입도분석 전용 카드 생성
+        function createParticleSizeCard(item, isCompleted) {
+            const card = document.createElement('div');
+            card.className = 'inspection-card';
+            card.id = `card-${item.name}`;
+            
+            let meshInputs = '';
+            item.particleSpecs.forEach(spec => {
+                const meshId = spec.meshSize.replace('#', '').replace('+', '').replace('-', 'M');
+                meshInputs += `
+                    <div class="mesh-group">
+                        <div class="mesh-header">
+                            <span class="mesh-name">${spec.meshSize}</span>
+                            <span class="mesh-spec">${spec.min} ~ ${spec.max} %</span>
+                        </div>
+                        <div class="input-group">
+                            <label>1회:</label>
+                            <input type="number" step="any" id="ParticleSize${meshId}-1" 
+                                   oninput="calculateParticleSizeAverage('${meshId}')"
+                                   ${isCompleted ? 'disabled' : ''}>
+                            <div class="unit">%</div>
+                        </div>
+                        <div class="input-group">
+                            <label>2회:</label>
+                            <input type="number" step="any" id="ParticleSize${meshId}-2" 
+                                   oninput="calculateParticleSizeAverage('${meshId}')"
+                                   ${isCompleted ? 'disabled' : ''}>
+                            <div class="unit">%</div>
+                        </div>
+                        <div class="mesh-result">
+                            <span>평균: <span id="ParticleSize${meshId}-avg">-</span>%</span>
+                            <span class="result-status pending" id="ParticleSize${meshId}-result">대기중</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                </div>
+                
+                <div class="particle-size-inputs">
+                    ${meshInputs}
+                </div>
+                
+                <div class="calculation-result">
+                    <div class="avg-result">
+                        <div><strong>전체 결과:</strong></div>
+                        <div class="result-status pending" id="ParticleSize-result">대기중</div>
+                    </div>
+                </div>
+                
+                <button class="save-btn ${isCompleted ? 'saved' : ''}" 
+                        id="ParticleSize-save" 
+                        onclick="saveInspectionItem('ParticleSize')"
+                        ${isCompleted ? 'disabled' : ''}>
+                    ${isCompleted ? '저장완료' : '저장'}
+                </button>
+            `;
+            
+            return card;
+        }
+
+
+        // 평균 계산 및 합격/불합격 판정
+        function calculateAverage(itemName) {
+            const val1 = parseFloat(document.getElementById(itemName + '-1').value) || null;
+            const val2 = parseFloat(document.getElementById(itemName + '-2').value) || null;
+            const val3 = parseFloat(document.getElementById(itemName + '-3').value) || null;
+            
+            const values = [val1, val2, val3].filter(v => v !== null);
+            
+            if (values.length === 0) {
+                document.getElementById(itemName + '-avg').textContent = '-';
+                document.getElementById(itemName + '-result').textContent = '대기중';
+                document.getElementById(itemName + '-result').className = 'result-status pending';
+                return;
+            }
+            
+            const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+            document.getElementById(itemName + '-avg').textContent = average.toFixed(3);
+            
+            // 합격/불합격 판정
+            const item = currentInspectionItems.find(item => item.name === itemName);
+            let result = 'PASS';
+            
+            if (item.min !== '' && average < parseFloat(item.min)) {
+                result = 'FAIL';
+            }
+            if (item.max !== '' && average > parseFloat(item.max)) {
+                result = 'FAIL';
+            }
+            
+            const resultElement = document.getElementById(itemName + '-result');
+            if (result === 'PASS') {
+                resultElement.textContent = '합격';
+                resultElement.className = 'result-status pass';
+            } else {
+                resultElement.textContent = '불합격';
+                resultElement.className = 'result-status fail';
+            }
+        }
+        
+        // 입도분석 개별 MESH 평균 계산
+        function calculateParticleSizeAverage(meshId) {
+            const val1 = parseFloat(document.getElementById(`ParticleSize${meshId}-1`).value) || null;
+            const val2 = parseFloat(document.getElementById(`ParticleSize${meshId}-2`).value) || null;
+            
+            const values = [val1, val2].filter(v => v !== null);
+            
+            if (values.length === 0) {
+                document.getElementById(`ParticleSize${meshId}-avg`).textContent = '-';
+                document.getElementById(`ParticleSize${meshId}-result`).textContent = '대기중';
+                document.getElementById(`ParticleSize${meshId}-result`).className = 'result-status pending';
+                updateParticleSizeOverallResult();
+                return;
+            }
+            
+            const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+            document.getElementById(`ParticleSize${meshId}-avg`).textContent = average.toFixed(2);
+            
+            // 합격/불합격 판정 (별도 함수에서 처리)
+            checkParticleSizeMeshResult(meshId, average);
+            updateParticleSizeOverallResult();
+        }
+        
+        // 개별 MESH 합격/불합격 판정
+        function checkParticleSizeMeshResult(meshId, average) {
+            // ParticleSize 항목에서 해당 MESH의 규격 찾기
+            const particleItem = currentInspectionItems.find(item => item.name === 'ParticleSize');
+            if (!particleItem || !particleItem.particleSpecs) return;
+            
+            const meshName = meshId.includes('M') ? `-325#` : `+${meshId.replace('M', '')}#`;
+            const meshSpec = particleItem.particleSpecs.find(spec => spec.meshSize === meshName);
+            
+            if (!meshSpec) return;
+            
+            let result = 'PASS';
+            if (average < parseFloat(meshSpec.min) || average > parseFloat(meshSpec.max)) {
+                result = 'FAIL';
+            }
+            
+            const resultElement = document.getElementById(`ParticleSize${meshId}-result`);
+            if (result === 'PASS') {
+                resultElement.textContent = '합격';
+                resultElement.className = 'result-status pass';
+            } else {
+                resultElement.textContent = '불합격';
+                resultElement.className = 'result-status fail';
+            }
+        }
+        
+        // 입도분석 전체 결과 업데이트
+        function updateParticleSizeOverallResult() {
+            const meshIds = ['80', '100', '150', '200', '325', '325M'];
+            let hasResults = false;
+            let overallResult = 'PASS';
+            
+            meshIds.forEach(meshId => {
+                const resultElement = document.getElementById(`ParticleSize${meshId}-result`);
+                if (resultElement && resultElement.textContent !== '대기중') {
+                    hasResults = true;
+                    if (resultElement.textContent === '불합격') {
+                        overallResult = 'FAIL';
+                    }
+                }
+            });
+            
+            const overallResultElement = document.getElementById('ParticleSize-result');
+            if (!hasResults) {
+                overallResultElement.textContent = '대기중';
+                overallResultElement.className = 'result-status pending';
+            } else {
+                if (overallResult === 'PASS') {
+                    overallResultElement.textContent = '합격';
+                    overallResultElement.className = 'result-status pass';
+                } else {
+                    overallResultElement.textContent = '불합격';
+                    overallResultElement.className = 'result-status fail';
+                }
+            }
+        }
+
+        // 겉보기밀도 계산 함수
+        function calculateApparentDensity(itemName) {
+            const apparentDensities = [];
+            
+            // 1차, 2차, 3차 각각 계산
+            for (let i = 1; i <= 3; i++) {
+                const emptyCupWeight = parseFloat(document.getElementById(itemName + '-emptyCup' + i).value) || null;
+                const powderWeight = parseFloat(document.getElementById(itemName + '-powderWeight' + i).value) || null;
+                
+                if (emptyCupWeight !== null && powderWeight !== null) {
+                    const apparentDensity = (powderWeight - emptyCupWeight) / 25;
+                    apparentDensities.push(apparentDensity);
+                    document.getElementById(itemName + '-calculated' + i).textContent = apparentDensity.toFixed(3);
+                } else {
+                    document.getElementById(itemName + '-calculated' + i).textContent = '-';
+                }
+            }
+            
+            // 평균 계산
+            if (apparentDensities.length === 0) {
+                document.getElementById(itemName + '-avg').textContent = '-';
+                document.getElementById(itemName + '-result').textContent = '대기중';
+                document.getElementById(itemName + '-result').className = 'result-status pending';
+                return;
+            }
+            
+            const average = apparentDensities.reduce((sum, val) => sum + val, 0) / apparentDensities.length;
+            document.getElementById(itemName + '-avg').textContent = average.toFixed(3);
+            
+            // 합격/불합격 판정
+            const item = currentInspectionItems.find(item => item.name === itemName);
+            let result = 'PASS';
+            
+            if (item.min !== '' && average < parseFloat(item.min)) {
+                result = 'FAIL';
+            }
+            if (item.max !== '' && average > parseFloat(item.max)) {
+                result = 'FAIL';
+            }
+            
+            const resultElement = document.getElementById(itemName + '-result');
+            if (result === 'PASS') {
+                resultElement.textContent = '합격';
+                resultElement.className = 'result-status pass';
+            } else {
+                resultElement.textContent = '불합격';
+                resultElement.className = 'result-status fail';
+            }
+        }
+
+        // 검사 항목 저장
+        function saveInspectionItem(itemName) {
+          
+            // ParticleSize 전용 저장 처리
+            if (itemName === 'ParticleSize') {
+                saveParticleSizeItem();
+                return;
+            }
+
+            // 겉보기밀도 전용 저장 처리 추가
+            if (itemName === 'ApparentDensity') {
+                saveApparentDensityItemClient(); // 함수 이름 변경
+                return;
+            }
+
+            const val1 = document.getElementById(itemName + '-1').value;
+            const val2 = document.getElementById(itemName + '-2').value;
+            const val3 = document.getElementById(itemName + '-3').value;
+            
+            const values = [val1, val2, val3];
+            const validValues = values.filter(v => v !== '' && !isNaN(v));
+            
+            if (validValues.length === 0) {
+                alert('최소 1개 이상의 측정값을 입력해주세요.');
+                return;
+            }
+            
+            // 저장 버튼 비활성화 및 로딩 상태
+            const saveBtn = document.getElementById(itemName + '-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장중...';
+            saveBtn.disabled = true;
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        // 저장 성공
+                        saveBtn.textContent = '저장완료';
+                        saveBtn.className = 'save-btn saved';
+                        
+                        // 입력 필드 비활성화
+                        document.getElementById(itemName + '-1').disabled = true;
+                        document.getElementById(itemName + '-2').disabled = true;
+                        document.getElementById(itemName + '-3').disabled = true;
+                        
+                        // 완료된 항목에 추가
+                        if (!completedItems.includes(itemName)) {
+                            completedItems.push(itemName);
+                        }
+                        
+                        // 진행률 업데이트
+                        updateInspectionProgress();
+                        
+                        alert('저장되었습니다.');
+                        
+                        // 모든 항목 완료 시 대시보드로 이동 제안
+                        if (completedItems.length === currentInspectionItems.length) {
+                            if (confirm('모든 검사 항목이 완료되었습니다. 대시보드로 돌아가시겠습니까?')) {
+                                showPage('dashboard');
+                                loadInspectionItems(); // 목록 새로고침
+                            }
+                        }
+                    } else {
+                        alert(result ? result.message : '저장 실패');
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('저장 중 오류가 발생했습니다: ' + error.toString());
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                })
+                .saveInspectionItem(
+                    currentInspectionData.powderName,
+                    currentInspectionData.lotNumber,
+                    itemName,
+                    values
+                );
+        }
+        
+        // 검사 진행률 업데이트
+        function updateInspectionProgress() {
+            const totalItems = currentInspectionItems.length;
+            const completed = completedItems.length;
+            const percentage = totalItems > 0 ? (completed / totalItems) * 100 : 0;
+            
+            document.getElementById('inspectionProgressFill').style.width = percentage + '%';
+            document.getElementById('inspectionProgressText').textContent = `${completed}/${totalItems}`;
+        }
+        
+        // 검사 결과 조회 실행
+        function executeSearch() {
+            const powderName = document.getElementById('searchPowderSelect').value;
+            const lotNumber = document.getElementById('searchLotNumber').value.trim();
+            const startDate = document.getElementById('searchStartDate').value;
+            const endDate = document.getElementById('searchEndDate').value;
+            
+            // UI 상태 업데이트
+            document.getElementById('searchLoadingMessage').style.display = 'block';
+            document.getElementById('searchEmptyResults').style.display = 'none';
+            document.getElementById('searchResults').style.display = 'none';
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    document.getElementById('searchLoadingMessage').style.display = 'none';
+                    
+                    if (result && result.success) {
+                        searchResults = result.data;
+                        displaySearchResults(result.data);
+                    } else {
+                        alert(result ? result.message : '조회 실패');
+                        document.getElementById('searchEmptyResults').style.display = 'block';
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    document.getElementById('searchLoadingMessage').style.display = 'none';
+                    document.getElementById('searchEmptyResults').style.display = 'block';
+                    console.error('검색 실패:', error);
+                })
+                .searchInspectionResults(
+                    powderName || null,
+                    lotNumber || null,
+                    startDate || null,
+                    endDate || null
+                );
+        }
+        
+        // 검색 결과 표시
+        function displaySearchResults(results) {
+            if (results.length === 0) {
+                document.getElementById('searchEmptyResults').style.display = 'block';
+                document.getElementById('searchResultsCount').textContent = '조회된 결과가 없습니다';
+                return;
+            }
+            
+            // 결과 수 표시
+            document.getElementById('searchResultsCount').textContent = `총 ${results.length}건의 결과`;
+            
+            // 테이블 헤더 생성
+            createSearchTableHeader(results[0]);
+            
+            // 테이블 바디 생성
+            createSearchTableBody(results);
+            
+            // 테이블 표시
+            document.getElementById('searchResults').style.display = 'block';
+        }
+        
+        // 검색 결과 테이블 헤더 생성
+        function createSearchTableHeader(sampleResult) {
+            const header = document.getElementById('searchTableHeader');
+            header.innerHTML = '';
+            
+            // 지정된 순서로 컬럼 생성
+            const orderedColumns = [
+                'InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector',
+                'FinalResult', 'ApparentDensityResult', 'FlowRateResult', 'CContentResult',
+                'CuContentResult', 'NiContentResult', 'MoContentResult', 'ParticleSizeResult',
+                'FormingLoadResult', 'FormingStrengthResult', 'SinterChangeRateResult',
+                'SinterStrengthResult'
+            ];
+            
+            orderedColumns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = getColumnDisplayName(column);
+                
+                // 헤더에도 동일한 클래스 적용
+                if (['InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector'].includes(column)) {
+                    th.className = 'basic-info-cell';
+                } else if (column === 'FinalResult') {
+                    th.className = 'final-result-cell';
+                } else {
+                    th.className = 'result-column';
+                }
+                
+                header.appendChild(th);
+            });
+        }
+
+        // 날짜만 표시하는 함수 (년/월/일)
+        function formatDateOnly(dateValue) {
+            if (!dateValue) return '-';
+            try {
+                const date = new Date(dateValue);
+                return date.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+            } catch (error) {
+                return dateValue;
+            }
+        }
+
+       
+        // 검색 결과 테이블 바디 생성
+        function createSearchTableBody(results) {
+            const tbody = document.getElementById('searchTableBody');
+            tbody.innerHTML = '';
+            
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                
+                // 지정된 순서로 데이터 추가
+                const orderedColumns = [
+                    'InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector',
+                    'FinalResult', 'ApparentDensityResult', 'FlowRateResult', 'CContentResult',
+                    'CuContentResult', 'NiContentResult', 'MoContentResult', 'ParticleSizeResult',
+                    'FormingLoadResult', 'FormingStrengthResult', 'SinterChangeRateResult',
+                    'SinterStrengthResult'
+                ];
+                
+                orderedColumns.forEach(column => {
+                    if (column === 'ParticleSizeResult') {
+                        // 입도분석 결과 통합 처리
+                        const particleSizeCell = createParticleSizeResultCell(result);
+                        particleSizeCell.className = 'result-column';
+                        row.appendChild(particleSizeCell);
+                    } else if (column === 'InspectionTime') {
+                        // 검사시간 - 년/월/일만 표시
+                        const timeCell = createSearchCell(formatDateOnly(result[column]));
+                        timeCell.className = 'basic-info-cell inspection-time-cell';
+                        row.appendChild(timeCell);
+                    } else if (column === 'InspectionType') {
+                        // 검사타입
+                        const cell = createSearchCell(result[column] || '-');
+                        cell.className = 'basic-info-cell';
+                        row.appendChild(cell);
+                    } else if (['PowderName', 'LotNumber', 'Inspector'].includes(column)) {
+                        // 분말명, LOT번호, 검사자 - 한줄 표시
+                        const cell = createSearchCell(result[column] || '-');
+                        cell.className = 'basic-info-cell info-cell';
+                        row.appendChild(cell);
+                    } else {
+                        // 검사 결과 (최종결과 포함)
+                        const cell = createSearchResultCell(result[column], column);
+                        if (column === 'FinalResult') {
+                            cell.className = 'final-result-cell';
+                        } else {
+                            cell.className = 'result-column';
+                        }
+                        row.appendChild(cell);
+                    }
+                });
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // 입도분석 결과 통합 함수 (새로 추가)
+        function createParticleSizeResultCell(result) {
+            const cell = document.createElement('td');
+            
+            // 입도분석 관련 컬럼들 확인
+            const particleSizeColumns = [
+                'ParticleSize80Result', 'ParticleSize100Result', 'ParticleSize150Result',
+                'ParticleSize200Result', 'ParticleSize325Result', 'ParticleSize325MResult'
+            ];
+            
+            let allPass = true;
+            let hasData = false;
+            
+            particleSizeColumns.forEach(column => {
+                if (result[column]) {
+                    hasData = true;
+                    if (result[column] !== 'PASS') {
+                        allPass = false;
+                    }
+                }
+            });
+            
+            if (!hasData) {
+                cell.textContent = '-';
+            } else {
+                const span = document.createElement('span');
+                span.className = `result-status ${allPass ? 'pass' : 'fail'}`;
+                span.textContent = allPass ? 'OK' : 'NG';
+                span.style.fontSize = '0.8em';
+                span.style.padding = '4px 8px';
+                cell.appendChild(span);
+            }
+            
+            return cell;
+        }
+        
+        // 검색 결과 셀 생성
+        function createSearchCell(content) {
+            const cell = document.createElement('td');
+            cell.textContent = content || '-';
+            return cell;
+        }
+        
+        // 검사 결과 셀 생성 (수정된 버전)
+        function createSearchResultCell(result, columnName = '') {
+            const cell = document.createElement('td');
+            
+            if (result === 'PASS' || result === 'FAIL') {
+                const span = document.createElement('span');
+                span.className = `result-status ${result.toLowerCase()}`;
+                span.textContent = result === 'PASS' ? 'OK' : 'NG';
+                span.style.fontSize = '0.8em';
+                span.style.padding = '4px 8px';
+                
+                // 최종결과인 경우 클릭 이벤트 추가
+                if (columnName === 'FinalResult') {
+                    span.style.cursor = 'pointer';
+                    span.title = '클릭하여 상세 검사값 보기';
+                    span.onclick = function() {
+                        showInspectionDetail(this.closest('tr'));
+                    };
+                }
+                
+                cell.appendChild(span);
+            } else {
+                cell.textContent = '-';
+            }
+            return cell;
+        }
+        
+        // 컬럼 표시명 변환
+        function getColumnDisplayName(columnKey) {
+            const displayNames = {
+                'InspectionTime': '검사시간',
+                'InspectionType': '검사타입',
+                'PowderName': '분말명',
+                'LotNumber': 'LOT번호',
+                'Inspector': '검사자',
+                'FinalResult': '최종결과',
+                'ApparentDensityResult': '겉보기밀도',
+                'FlowRateResult': '유동도',
+                'CContentResult': 'C함량',
+                'CuContentResult': 'Cu함량',
+                'NiContentResult': 'Ni함량',
+                'MoContentResult': 'Mo함량',
+                'ParticleSizeResult': '입도',
+                'FormingLoadResult': '성형하중',
+                'FormingStrengthResult': '성형강도',
+                'SinterChangeRateResult': '소결변화율',
+                'SinterStrengthResult': '소결강도'
+            };
+            
+            return displayNames[columnKey] || columnKey;
+        }
+        
+        // 날짜 포맷
+        function formatDate(dateValue) {
+            if (!dateValue) return '-';
+            try {
+                const date = new Date(dateValue);
+                return date.toLocaleString('ko-KR');
+            } catch (error) {
+                return dateValue;
+            }
+        }
+        
+        // 모달 외부 클릭시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('newInspectionModal');
+            if (event.target === modal) {
+                closeNewInspectionModal();
+            }
+        };
+        
+        // 키보드 이벤트 (ESC로 모달 닫기)
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeNewInspectionModal();
+            }
+        });
+
+        // 바코드 스캔 시작
+        function startBarcodeScanning() {
+            document.getElementById('barcodeScanner').style.display = 'block';
+            initializeBarcodeScanner();
+        }
+
+        // 바코드 스캐너 초기화
+        function initializeBarcodeScanner() {
+            // 기존 이벤트 리스너 제거
+            if (typeof Quagga !== 'undefined') {
+                Quagga.offDetected();
+                Quagga.offProcessed();
+            }
+            
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#scannerArea')
+                },
+                decoder: {
+                    readers: ["code_128_reader", "code_39_reader", "ean_reader", "ean_8_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error('바코드 스캐너 초기화 실패:', err);
+                    alert('카메라에 접근할 수 없습니다. 카메라 권한을 허용해주세요.');
+                    return;
+                }
+                console.log('바코드 스캐너가 성공적으로 초기화되었습니다.');
+                Quagga.start();
+                
+                // 이벤트 리스너 등록
+                Quagga.onDetected(function(data) {
+                    const barcode = data.codeResult.code;
+                    console.log('바코드 감지됨:', barcode);
+                    handleBarcodeDetected(barcode);
+                });
+            });
+        }
+
+        // 바코드 감지 처리 (중복 방지)
+        let isProcessingBarcode = false;
+
+        function handleBarcodeDetected(barcode) {
+            if (isProcessingBarcode) return; // 중복 처리 방지
+            
+            isProcessingBarcode = true;
+            Quagga.stop();
+            closeBarcodeScanner();
+            
+            console.log('스캔된 바코드:', barcode);
+            
+            // 바코드 데이터 파싱
+            const barcodeData = parseBarcodeData(barcode);
+            console.log('파싱된 데이터:', barcodeData);
+            
+            if (!barcodeData.lotNumber) {
+                alert('올바른 바코드 형식이 아닙니다.');
+                resetBarcodeScanning();
+                return;
+            }
+            
+            // 스캔 결과 확인 팝업
+            showBarcodeConfirmation(barcodeData);
+        }
+
+        // 바코드 스캔 결과 확인
+        function showBarcodeConfirmation(barcodeData) {
+            const message = '스캔된 정보가 맞습니까?\n\n' +
+                          '분말명: ' + barcodeData.powderName + '\n' +
+                          'LOT번호: ' + barcodeData.lotNumber + '\n\n' +
+                          '확인을 누르면 계속 진행됩니다.';
+            
+            if (confirm(message)) {
+                // 확인 선택 시 기존 검사 데이터 확인
+                checkExistingInspection(barcodeData.powderName, barcodeData.lotNumber);
+            } else {
+                // 취소 선택 시 재스캔 또는 수동입력 선택
+                showRescanOptions();
+            }
+        }
+
+        // 재스캔 또는 수동입력 선택
+        function showRescanOptions() {
+            if (confirm('다시 스캔하시겠습니까?\n\n확인: 재스캔\n취소: 수동입력')) {
+                // 재스캔 선택
+                resetBarcodeScanning();
+                startBarcodeScanning();
+            } else {
+                // 수동입력 선택
+                resetBarcodeScanning();
+                showNewInspectionModal();
+            }
+        }
+
+        // 바코드 스캔 상태 초기화
+        function resetBarcodeScanning() {
+            isProcessingBarcode = false;
+        }
+        
+        // 기존 검사 데이터 확인
+        function checkExistingInspection(powderName, lotNumber) {
+            console.log('검사 데이터 확인 중:', powderName, lotNumber);
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    handleInspectionCheckResult(result, powderName, lotNumber);
+                })
+                .withFailureHandler(function(error) {
+                    console.error('검사 확인 실패:', error);
+                    alert('검사 데이터 확인 중 오류가 발생했습니다.');
+                })
+                .getExistingInspection(powderName, lotNumber);
+        }
+        
+        // 검사 확인 결과 처리
+        function handleInspectionCheckResult(existingInspection, powderName, lotNumber) {
+            if (existingInspection) {
+                // 미완료 검사가 있는 경우
+                if (confirm('미완료된 검사가 있습니다.\n검사를 계속 진행하시겠습니까?')) {
+                    startInspectionFromExisting(powderName, lotNumber);
+                } else {
+                    resetBarcodeScanning();
+                }
+            } else {
+                // 완료된 검사 확인
+                checkCompletedInspection(powderName, lotNumber);
+            }
+        }
+        
+        // 완료된 검사 확인
+        function checkCompletedInspection(powderName, lotNumber) {
+            const searchPowderName = powderName || null;
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success && result.data && result.data.length > 0) {
+                        showCompletedInspectionResult(result.data[0]);
+                    } else {
+                        startNewInspectionFromBarcode(powderName, lotNumber);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('완료된 검사 확인 실패:', error);
+                    startNewInspectionFromBarcode(powderName, lotNumber);
+                })
+                .searchInspectionResults(searchPowderName, lotNumber, null, null);
+        }
+        
+        // 완료된 검사 결과 표시
+        function showCompletedInspectionResult(inspectionData) {
+            alert('검사 완료 결과:\n분말명: ' + inspectionData.PowderName + 
+                  '\nLOT번호: ' + inspectionData.LotNumber + 
+                  '\n최종결과: ' + (inspectionData.FinalResult === 'PASS' ? 'OK' : 'NG'));
+            // 다음 단계에서 상세 결과 화면 구현 예정
+        }
+
+        // 바코드 스캐너 닫기
+        function closeBarcodeScanner() {
+            if (typeof Quagga !== 'undefined') {
+                Quagga.stop();
+                Quagga.offDetected(); // 이벤트 리스너 제거
+                Quagga.offProcessed(); // 처리 이벤트 제거
+            }
+            document.getElementById('barcodeScanner').style.display = 'none';
+            isProcessingBarcode = false; // 처리 상태 초기화
+            console.log('바코드 스캐너가 완전히 정리되었습니다.');
+        }
+
+        // 바코드 데이터 파싱 (형식: "ABC-100-254848")
+        function parseBarcodeData(barcode) {
+            let powderName = '';
+            let lotNumber = '';
+            
+            // 마지막 하이픈을 기준으로 분할
+            const lastDashIndex = barcode.lastIndexOf('-');
+            
+            if (lastDashIndex !== -1) {
+                powderName = barcode.substring(0, lastDashIndex);
+                lotNumber = barcode.substring(lastDashIndex + 1);
+            } else {
+                // 하이픈이 없으면 전체를 LOT번호로 처리
+                lotNumber = barcode;
+            }
+            
+            return {
+                powderName: powderName.trim(),
+                lotNumber: lotNumber.trim(),
+                originalBarcode: barcode
+            };
+        }
+
+        // 수동 입력으로 전환
+        function showManualInput() {
+            closeBarcodeScanner();
+            showNewInspectionModal();
+        }
+
+        // 기존 검사 이어서 하기 (바코드에서)
+        function startInspectionFromExisting(powderName, lotNumber) {
+            // 1단계: 기존 검사 정보 먼저 가져오기
+            google.script.run
+                .withSuccessHandler(function(existingData) {
+                    if (existingData) {
+                        // 2단계: 기존 검사 정보로 startInspection 호출
+                        google.script.run
+                            .withSuccessHandler(function(result) {
+                                if (result && result.success) {
+                                    startInspectionProcess(result);
+                                } else {
+                                    alert('검사 시작에 실패했습니다: ' + (result ? result.message : '알 수 없는 오류'));
+                                }
+                                resetBarcodeScanning();
+                            })
+                            .withFailureHandler(function(error) {
+                                alert('검사 시작 중 오류가 발생했습니다: ' + error.toString());
+                                resetBarcodeScanning();
+                            })
+                            .startInspection(powderName, lotNumber, existingData.inspectionType, existingData.inspector);
+                    } else {
+                        alert('기존 검사 데이터를 찾을 수 없습니다.');
+                        resetBarcodeScanning();
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('기존 검사 조회 중 오류가 발생했습니다: ' + error.toString());
+                    resetBarcodeScanning();
+                })
+                .getExistingInspection(powderName, lotNumber);
+        }
+
+        // 새 검사 시작 (바코드에서)
+        function startNewInspectionFromBarcode(powderName, lotNumber) {
+            // 새 검사 시작 모달을 열고 분말명/LOT번호 자동 입력
+            showNewInspectionModal();
+            
+            // 짧은 지연 후 값 설정 (DOM 업데이트 대기)
+            setTimeout(function() {
+                if (powderName) {
+                    document.getElementById('modalPowderSelect').value = powderName;
+                }
+                document.getElementById('modalLotNumber').value = lotNumber;
+                
+                // 포커스를 검사자 선택란으로 이동
+                document.getElementById('modalInspectorSelect').focus();
+            }, 100);
+            
+            resetBarcodeScanning();
+        }
+
+        // 완료된 검사 결과 표시 개선
+        function showCompletedInspectionResult(inspectionData) {
+            const resultMessage = '=== 검사 완료 결과 ===\n' +
+                                '분말명: ' + inspectionData.PowderName + '\n' +
+                                'LOT번호: ' + inspectionData.LotNumber + '\n' +
+                                '검사자: ' + inspectionData.Inspector + '\n' +
+                                '검사일시: ' + inspectionData.InspectionTime + '\n' +
+                                '최종결과: ' + (inspectionData.FinalResult === 'PASS' ? 'OK' : 'NG');
+            
+            alert(resultMessage);
+            isProcessingBarcode = false;
+        }
+
+        // 입도분석 저장 전용 함수
+        function saveParticleSizeItem() {
+            console.log('saveParticleSizeItem 함수 시작');
+            const meshIds = ['80', '100', '150', '200', '325', '325M'];
+            const particleData = {};
+            let hasValidData = false;
+            
+            // 각 MESH별 데이터 수집
+            meshIds.forEach(meshId => {
+                console.log('Processing meshId:', meshId);
+                
+                const input1 = document.getElementById(`ParticleSize${meshId}-1`);
+                const input2 = document.getElementById(`ParticleSize${meshId}-2`);
+                
+                if (!input1 || !input2) {
+                    console.error(`입력 필드를 찾을 수 없음: ParticleSize${meshId}`);
+                    return;
+                }
+                
+                const val1 = input1.value;
+                const val2 = input2.value;
+                
+                particleData[meshId] = {
+                    val1: val1 || '',
+                    val2: val2 || '',
+                    avg: document.getElementById(`ParticleSize${meshId}-avg`).textContent,
+                    result: document.getElementById(`ParticleSize${meshId}-result`).textContent
+                };
+                
+                if (val1 !== '' || val2 !== '') {
+                    hasValidData = true;
+                }
+            });
+            
+            if (!hasValidData) {
+                alert('최소 1개 이상의 측정값을 입력해주세요.');
+                return;
+            }
+            
+            // 저장 버튼 상태 변경
+            const saveBtn = document.getElementById('ParticleSize-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장중...';
+            saveBtn.disabled = true;
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        // 저장 성공 처리
+                        saveBtn.textContent = '저장완료';
+                        saveBtn.className = 'save-btn saved';
+                        
+                        // 모든 입력 필드 비활성화
+                        meshIds.forEach(meshId => {
+                            document.getElementById(`ParticleSize${meshId}-1`).disabled = true;
+                            document.getElementById(`ParticleSize${meshId}-2`).disabled = true;
+                        });
+                        
+                        // 완료된 항목에 추가
+                        if (!completedItems.includes('ParticleSize')) {
+                            completedItems.push('ParticleSize');
+                        }
+                        
+                        updateInspectionProgress();
+                        alert('입도분석 결과가 저장되었습니다.');
+                        
+                        // 모든 항목 완료 확인
+                        if (completedItems.length === currentInspectionItems.length) {
+                            if (confirm('모든 검사 항목이 완료되었습니다. 대시보드로 돌아가시겠습니까?')) {
+                                showPage('dashboard');
+                                loadIncompleteInspections();
+                            }
+                        }
+                    } else {
+                        alert(result ? result.message : '저장 실패');
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('저장 중 오류가 발생했습니다: ' + error.toString());
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                })
+                .saveParticleSizeData(
+                    currentInspectionData.powderName,
+                    currentInspectionData.lotNumber,
+                    particleData
+                );
+        }
+
+        // 검사 상세 조회 화면 표시
+        function showInspectionDetail(tableRow) {
+            const cells = tableRow.querySelectorAll('td');
+            const powderName = cells[2].textContent; // 분말명
+            const lotNumber = cells[3].textContent;   // LOT번호
+            
+            console.log('검사 상세 조회:', powderName, lotNumber);
+            
+            // 검사 상세 데이터 조회
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        displayInspectionDetail(result.data);
+                    } else {
+                        alert('검사 상세 데이터를 찾을 수 없습니다.');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('검사 상세 조회 중 오류가 발생했습니다: ' + error.toString());
+                })
+                .getInspectionDetail(powderName, lotNumber);
+        }
+
+        // 검사 상세 데이터 표시
+        function displayInspectionDetail(inspectionData) {
+            // 기본 정보 표시
+            document.getElementById('detailPowderName').textContent = inspectionData.PowderName || '-';
+            document.getElementById('detailLotNumber').textContent = inspectionData.LotNumber || '-';
+            document.getElementById('detailInspectionType').textContent = inspectionData.InspectionType || '-';
+            document.getElementById('detailInspector').textContent = inspectionData.Inspector || '-';
+            document.getElementById('detailInspectionTime').textContent = formatDate(inspectionData.InspectionTime) || '-';
+            
+            // 최종결과 표시
+            const finalResultElement = document.getElementById('detailFinalResult');
+            if (inspectionData.FinalResult === 'PASS') {
+                finalResultElement.innerHTML = '<span class="result-status pass">OK</span>';
+            } else if (inspectionData.FinalResult === 'FAIL') {
+                finalResultElement.innerHTML = '<span class="result-status fail">NG</span>';
+            } else {
+                finalResultElement.textContent = '-';
+            }
+            
+            // 검사 항목들 표시
+            displayInspectionDetailItems(inspectionData);
+            
+            // 검사 상세 페이지로 이동
+            showPage('inspectionDetail');
+        }
+
+        // 검사 상세 항목들 표시
+        function displayInspectionDetailItems(inspectionData) {
+            const container = document.getElementById('inspectionDetailItems');
+            container.innerHTML = '';
+            
+            // 검사 항목들 정의 (규격 정보 포함)
+            const inspectionItems = [
+                { 
+                    name: 'FlowRate', 
+                    displayName: '유동도', 
+                    unit: 's/50g',
+                    specColumns: ['FlowRateMin', 'FlowRateMax']
+                },
+                { 
+                    name: 'ApparentDensity', 
+                    displayName: '겉보기밀도', 
+                    unit: 'g/cm³',
+                    specColumns: ['ApparentDensityMin', 'ApparentDensityMax']
+                },
+                { 
+                    name: 'CContent', 
+                    displayName: 'C함량', 
+                    unit: '%',
+                    specColumns: ['CContentMin', 'CContentMax']
+                },
+                { 
+                    name: 'CuContent', 
+                    displayName: 'Cu함량', 
+                    unit: '%',
+                    specColumns: ['CuContentMin', 'CuContentMax']
+                },
+                { 
+                    name: 'NiContent', 
+                    displayName: 'Ni함량', 
+                    unit: '%',
+                    specColumns: ['NiContentMin', 'NiContentMax']
+                },
+                { 
+                    name: 'MoContent', 
+                    displayName: 'Mo함량', 
+                    unit: '%',
+                    specColumns: ['MoContentMin', 'MoContentMax']
+                },
+                { 
+                    name: 'SinterChangeRate', 
+                    displayName: '소결변화율', 
+                    unit: '%',
+                    specColumns: ['SinterChangeRateMin', 'SinterChangeRateMax']
+                },
+                { 
+                    name: 'SinterStrength', 
+                    displayName: '소결강도', 
+                    unit: 'MPa',
+                    specColumns: ['SinterStrengthMin', 'SinterStrengthMax']
+                },
+                { 
+                    name: 'FormingStrength', 
+                    displayName: '성형강도', 
+                    unit: 'N',
+                    specColumns: ['FormingStrengthMin', 'FormingStrengthMax']
+                },
+                { 
+                    name: 'FormingLoad', 
+                    displayName: '성형하중', 
+                    unit: 'kN',
+                    specColumns: ['FormingLoadMin', 'FormingLoadMax']
+                },
+                { 
+                    name: 'ParticleSize', 
+                    displayName: '입도분석', 
+                    unit: '%', 
+                    isParticleSize: true 
+                }
+            ];
+            
+            inspectionItems.forEach(item => {
+                if (item.isParticleSize) {
+                    const particleSizeCard = createParticleSizeDetailCard(item, inspectionData);
+                    container.appendChild(particleSizeCard);
+                } else {
+                    const detailCard = createInspectionDetailCard(item, inspectionData);
+                    container.appendChild(detailCard);
+                }
+            });
+        }
+
+        // 일반 검사 항목 상세 카드 생성
+        function createInspectionDetailCard(item, inspectionData) {
+            const card = document.createElement('div');
+            card.className = 'inspection-detail-card';
+            
+            const val1 = inspectionData[item.name + '1'] || '';
+            const val2 = inspectionData[item.name + '2'] || '';
+            const val3 = inspectionData[item.name + '3'] || '';
+            const avg = inspectionData[item.name + 'Avg'] || '';
+            const result = inspectionData[item.name + 'Result'] || '';
+            
+            const resultClass = result === 'PASS' ? 'pass' : (result === 'FAIL' ? 'fail' : '');
+            const resultText = result === 'PASS' ? '합격' : (result === 'FAIL' ? '불합격' : '대기중');
+            
+            // 규격 정보 가져오기
+            let specRange = '';
+            if (inspectionData.powderSpec && item.specColumns) {
+                const min = inspectionData.powderSpec[item.specColumns[0]];
+                const max = inspectionData.powderSpec[item.specColumns[1]];
+                
+                if (min !== '' && max !== '') {
+                    specRange = `${min} ~ ${max}`;
+                } else if (min !== '') {
+                    specRange = `≥ ${min}`;
+                } else if (max !== '') {
+                    specRange = `≤ ${max}`;
+                }
+            }
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                    <div class="spec-range">
+                        ${item.unit}
+                        ${specRange ? `<span style="margin-left: 10px; color: #666; font-size: 0.9em;">(${specRange})</span>` : ''}
+                    </div>
+                </div>
+                
+                <div class="detail-measurement-values">
+                    <div class="detail-value-item">
+                        <div class="detail-value-label">1차</div>
+                        <div class="detail-value-number">${val1 || '-'}</div>
+                    </div>
+                    <div class="detail-value-item">
+                        <div class="detail-value-label">2차</div>
+                        <div class="detail-value-number">${val2 || '-'}</div>
+                    </div>
+                    <div class="detail-value-item">
+                        <div class="detail-value-label">3차</div>
+                        <div class="detail-value-number">${val3 || '-'}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-result-display ${resultClass}">
+                    <div class="detail-average">평균: ${avg || '-'} ${item.unit}</div>
+                    <div class="avg-result">
+                        <div class="result-status ${resultClass}">${resultText}</div>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // 입도분석 상세 카드 생성 (세부 입력값 모두 표시)
+        function createParticleSizeDetailCard(item, inspectionData) {
+            const card = document.createElement('div');
+            card.className = 'inspection-detail-card';
+            
+            const meshIds = ['80', '100', '150', '200', '325', '325M'];
+            let meshResults = '';
+            let overallResult = 'PASS';
+            
+            // 입도분석 규격 정보 가져오기
+            let particleSizeSpecs = [];
+            if (inspectionData.powderSpec) {
+                // ParticleSize 규격이 있는지 확인 (실제 구현에서는 별도 함수 필요)
+                // 여기서는 기본 구조만 제시
+            }
+            
+            meshIds.forEach(meshId => {
+                const val1 = inspectionData[`ParticleSize${meshId}_1`] || '';
+                const val2 = inspectionData[`ParticleSize${meshId}_2`] || '';
+                const avg = inspectionData[`ParticleSize${meshId}_Avg`] || '';
+                const result = inspectionData[`ParticleSize${meshId}_Result`] || '';
+                
+                if (result === 'FAIL') {
+                    overallResult = 'FAIL';
+                }
+                
+                const resultClass = result === 'PASS' ? 'pass' : (result === 'FAIL' ? 'fail' : '');
+                const resultText = result === 'PASS' ? '합격' : (result === 'FAIL' ? '불합격' : '대기중');
+                
+                // MESH 이름 표시 개선
+                let meshDisplayName = '';
+                if (meshId === '325M') {
+                    meshDisplayName = '-325#';
+                } else {
+                    meshDisplayName = `+${meshId}#`;
+                }
+                
+                // 해당 MESH의 규격 정보 찾기 (실제 구현에서는 별도 함수 필요)
+                let meshSpec = '';
+                // particleSizeSpecs에서 해당 MESH 규격 찾기
+                
+                meshResults += `
+                    <div class="mesh-group">
+                        <div class="mesh-header">
+                            <span class="mesh-name">${meshDisplayName}</span>
+                            <span class="mesh-spec">
+                                평균: ${avg || '-'}%
+                                ${meshSpec ? `<span style="margin-left: 10px; color: #666; font-size: 0.8em;">(${meshSpec})</span>` : ''}
+                            </span>
+                        </div>
+                        
+                        <div class="detail-measurement-values">
+                            <div class="detail-value-item">
+                                <div class="detail-value-label">1회 측정</div>
+                                <div class="detail-value-number">${val1 || '-'}%</div>
+                            </div>
+                            <div class="detail-value-item">
+                                <div class="detail-value-label">2회 측정</div>
+                                <div class="detail-value-number">${val2 || '-'}%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mesh-result">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                                <span style="font-weight: bold; color: #495057;">결과:</span>
+                                <span class="result-status ${resultClass}">${resultText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const overallResultClass = overallResult === 'PASS' ? 'pass' : 'fail';
+            const overallResultText = overallResult === 'PASS' ? '합격' : '불합격';
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                    <div class="spec-range">입도분석 상세 결과</div>
+                </div>
+                
+                <div class="particle-size-inputs">
+                    ${meshResults}
+                </div>
+                
+                <div class="detail-result-display ${overallResultClass}">
+                    <div class="avg-result">
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            <strong style="font-size: 1.1em;">전체 입도분석 결과</strong>
+                        </div>
+                        <div style="text-align: center;">
+                            <span class="result-status ${overallResultClass}" style="font-size: 1.1em; padding: 8px 16px;">
+                                ${overallResultText}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // 겉보기밀도 전용 카드 생성 (수정)
+        function createApparentDensityCard(item, isCompleted) {
+            const card = document.createElement('div');
+            card.className = 'inspection-card';
+            card.id = `card-${item.name}`;
+
+            const specRange = (item.min !== '' && item.max !== '') ? 
+                `${item.min} ~ ${item.max}` :
+                (item.min !== '' ? `≥ ${item.min}` : `≤ ${item.max}`);
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                    <div class="spec-range">${specRange} ${item.unit}</div>
+                </div>
+                
+                <div class="apparent-density-inputs">
+                    <div class="apparent-density-row">
+                        <label>1차:</label>
+                        <input type="number" step="any" id="${item.name}-emptyCup1" 
+                              oninput="calculateApparentDensity('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="빈컵중량">
+                        <input type="number" step="any" id="${item.name}-powderWeight1" 
+                              oninput="calculateApparentDensity('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="분말중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated1">-</div>
+                    </div>
+                    <div class="apparent-density-row">
+                        <label>2차:</label>
+                        <input type="number" step="any" id="${item.name}-emptyCup2" 
+                              oninput="calculateApparentDensity('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="빈컵중량">
+                        <input type="number" step="any" id="${item.name}-powderWeight2" 
+                              oninput="calculateApparentDensity('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="분말중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated2">-</div>
+                    </div>
+                    <div class="apparent-density-row">
+                        <label>3차:</label>
+                        <input type="number" step="any" id="${item.name}-emptyCup3" 
+                              oninput="calculateApparentDensity('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="빈컵중량">
+                        <input type="number" step="any" id="${item.name}-powderWeight3" 
+                              oninput="calculateApparentDensity('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="분말중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated3">-</div>
+                    </div>
+                </div>
+                
+                <div class="calculation-result">
+                    <div class="avg-result">
+                        <div>
+                            <strong>평균값: </strong>
+                            <span class="avg-value" id="${item.name}-avg">-</span>
+                            <span style="color: #666; font-size: 0.9em;">${item.unit}</span>
+                        </div>
+                        <div class="result-status pending" id="${item.name}-result">대기중</div>
+                    </div>
+                </div>
+                
+                <button class="save-btn ${isCompleted ? 'saved' : ''}" 
+                        id="${item.name}-save" 
+                        onclick="saveInspectionItem('${item.name}')"
+                        ${isCompleted ? 'disabled' : ''}>
+                    ${isCompleted ? '저장완료' : '저장'}
+                </button>
+            `;
+            
+            return card;
+        }
+
+        // 겉보기밀도 저장 함수 (클라이언트사이드 - 이름 변경)
+        function saveApparentDensityItemClient() {
+            const values = [];
+            
+            // 1차, 2차, 3차 데이터 수집
+            for (let i = 1; i <= 3; i++) {
+                const emptyCup = document.getElementById('ApparentDensity-emptyCup' + i).value;
+                const powderWeight = document.getElementById('ApparentDensity-powderWeight' + i).value;
+                values.push(emptyCup, powderWeight);
+            }
+            
+            // 유효한 데이터가 있는지 확인
+            const hasValidData = values.some(v => v !== '' && !isNaN(v));
+            if (!hasValidData) {
+                alert('최소 1개 이상의 측정값을 입력해주세요.');
+                return;
+            }
+            
+            // 저장 버튼 비활성화 및 로딩 상태
+            const saveBtn = document.getElementById('ApparentDensity-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장중...';
+            saveBtn.disabled = true;
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        // 저장 성공 처리
+                        saveBtn.textContent = '저장완료';
+                        saveBtn.className = 'save-btn saved';
+                        
+                        // 모든 입력 필드 비활성화
+                        for (let i = 1; i <= 3; i++) {
+                            document.getElementById('ApparentDensity-emptyCup' + i).disabled = true;
+                            document.getElementById('ApparentDensity-powderWeight' + i).disabled = true;
+                        }
+                        
+                        // 완료된 항목에 추가
+                        if (!completedItems.includes('ApparentDensity')) {
+                            completedItems.push('ApparentDensity');
+                        }
+                        
+                        // 진행률 업데이트
+                        updateInspectionProgress();
+                        
+                        alert('저장되었습니다.');
+                        
+                        // 모든 항목 완료 시 대시보드로 이동 제안
+                        if (completedItems.length === currentInspectionItems.length) {
+                            if (confirm('모든 검사 항목이 완료되었습니다. 대시보드로 돌아가시겠습니까?')) {
+                                showPage('dashboard');
+                                loadIncompleteInspections();
+                            }
+                        }
+                    } else {
+                        alert(result ? result.message : '저장 실패');
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('저장 중 오류가 발생했습니다: ' + error.toString());
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                })
+                .saveApparentDensityItem(
+                    currentInspectionData.powderName,
+                    currentInspectionData.lotNumber,
+                    values
+                );
+        }
+
+    </script>
+</body>
+</html>
