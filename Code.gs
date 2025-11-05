@@ -113,13 +113,17 @@ function initializeSheets() {
   }
   
   // 검사결과 시트 생성
+  // 검사결과 시트 생성
   let resultSheet = ss.getSheetByName('InspectionResult');
   if (!resultSheet) {
     resultSheet = ss.insertSheet('InspectionResult');
     const headers = [
       'PowderName', 'LotNumber', 'Inspector', 'InspectionTime', 'InspectionType',
       'FlowRate1', 'FlowRate2', 'FlowRate3', 'FlowRateAvg', 'FlowRateResult',
-      'ApparentDensity1', 'ApparentDensity2', 'ApparentDensity3', 'ApparentDensityAvg', 'ApparentDensityResult',
+      'ApparentDensity_EmptyCup1', 'ApparentDensity_PowderWeight1', 'ApparentDensity1',
+      'ApparentDensity_EmptyCup2', 'ApparentDensity_PowderWeight2', 'ApparentDensity2',
+      'ApparentDensity_EmptyCup3', 'ApparentDensity_PowderWeight3', 'ApparentDensity3',
+      'ApparentDensityAvg', 'ApparentDensityResult',
       'CContent1', 'CContent2', 'CContent3', 'CContentAvg', 'CContentResult',
       'CuContent1', 'CuContent2', 'CuContent3', 'CuContentAvg', 'CuContentResult',
       'NiContent1', 'NiContent2', 'NiContent3', 'NiContentAvg', 'NiContentResult',
@@ -621,30 +625,47 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
     
     // 겉보기밀도 전용 처리
     if (itemName === 'ApparentDensity') {
-      // 겉보기밀도는 기존 컬럼 구조를 사용 (ApparentDensity1, ApparentDensity2, ApparentDensity3)
-      const val1Col = headers.indexOf('ApparentDensity1') + 1;
-      const val2Col = headers.indexOf('ApparentDensity2') + 1;
-      const val3Col = headers.indexOf('ApparentDensity3') + 1;
-      const avgCol = headers.indexOf('ApparentDensityAvg') + 1;
-      const resultCol = headers.indexOf('ApparentDensityResult') + 1;
-      
       // values 배열: [emptyCup1, powderWeight1, emptyCup2, powderWeight2, emptyCup3, powderWeight3, average]
-      // 계산된 겉보기밀도 값들을 저장
-      const calculatedValues = [];
+      
+      // 원본 데이터와 계산된 값 모두 저장
       for (let i = 0; i < 3; i++) {
-        const emptyCup = parseFloat(values[i * 2]);
-        const powderWeight = parseFloat(values[i * 2 + 1]);
-        if (!isNaN(emptyCup) && !isNaN(powderWeight) && emptyCup !== '' && powderWeight !== '') {
-          const apparentDensity = (powderWeight - emptyCup) / 25;
-          calculatedValues.push(apparentDensity);
-        } else {
-          calculatedValues.push('');
+        const emptyCup = values[i * 2];
+        const powderWeight = values[i * 2 + 1];
+        
+        // 빈컵중량 저장
+        const emptyCupCol = headers.indexOf('ApparentDensity_EmptyCup' + (i + 1)) + 1;
+        if (emptyCupCol > 0) {
+          sheet.getRange(rowIndex, emptyCupCol).setValue(emptyCup || '');
+        }
+        
+        // 분말중량 저장
+        const powderWeightCol = headers.indexOf('ApparentDensity_PowderWeight' + (i + 1)) + 1;
+        if (powderWeightCol > 0) {
+          sheet.getRange(rowIndex, powderWeightCol).setValue(powderWeight || '');
+        }
+        
+        // 계산된 겉보기밀도 저장
+        const densityCol = headers.indexOf('ApparentDensity' + (i + 1)) + 1;
+        if (densityCol > 0) {
+          if (emptyCup !== '' && powderWeight !== '') {
+            const emptyCupNum = parseFloat(emptyCup);
+            const powderWeightNum = parseFloat(powderWeight);
+            if (!isNaN(emptyCupNum) && !isNaN(powderWeightNum)) {
+              const apparentDensity = (powderWeightNum - emptyCupNum) / 25;
+              sheet.getRange(rowIndex, densityCol).setValue(apparentDensity);
+            } else {
+              sheet.getRange(rowIndex, densityCol).setValue('');
+            }
+          } else {
+            sheet.getRange(rowIndex, densityCol).setValue('');
+          }
         }
       }
       
-      if (val1Col > 0) sheet.getRange(rowIndex, val1Col).setValue(calculatedValues[0] || '');
-      if (val2Col > 0) sheet.getRange(rowIndex, val2Col).setValue(calculatedValues[1] || '');
-      if (val3Col > 0) sheet.getRange(rowIndex, val3Col).setValue(calculatedValues[2] || '');
+      // 평균 및 결과 저장
+      const avgCol = headers.indexOf('ApparentDensityAvg') + 1;
+      const resultCol = headers.indexOf('ApparentDensityResult') + 1;
+      
       if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(average.toFixed(3));
       if (resultCol > 0) sheet.getRange(rowIndex, resultCol).setValue(result);
       
@@ -1177,6 +1198,52 @@ function saveApparentDensityItem(powderName, lotNumber, values) {
     return {
       success: false,
       message: '저장 중 오류가 발생했습니다: ' + error.toString()
+    };
+  }
+}
+
+// 검사 결과 삭제 함수
+function deleteInspectionResult(powderName, lotNumber) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const resultSheet = ss.getSheetByName('InspectionResult');
+    
+    if (!resultSheet) {
+      return { success: false, message: '검사 결과 시트를 찾을 수 없습니다.' };
+    }
+    
+    const data = resultSheet.getDataRange().getValues();
+    
+    // 해당 행 찾기
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
+        // 행 삭제
+        resultSheet.deleteRow(i + 1);
+        
+        // 진행중검사 시트에서도 삭제
+        const progressSheet = ss.getSheetByName('InspectionProgress');
+        if (progressSheet) {
+          const progressData = progressSheet.getDataRange().getValues();
+          for (let j = 1; j < progressData.length; j++) {
+            if (progressData[j][0] === powderName && String(progressData[j][1]) === String(lotNumber)) {
+              progressSheet.deleteRow(j + 1);
+              break;
+            }
+          }
+        }
+        
+        Logger.log('검사 결과 삭제 완료: ' + powderName + ' / ' + lotNumber);
+        return { success: true };
+      }
+    }
+    
+    return { success: false, message: '해당 검사 결과를 찾을 수 없습니다.' };
+    
+  } catch (error) {
+    Logger.log('deleteInspectionResult 오류: ' + error.toString());
+    return {
+      success: false,
+      message: '삭제 중 오류가 발생했습니다: ' + error.toString()
     };
   }
 }
