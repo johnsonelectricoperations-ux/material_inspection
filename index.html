@@ -1010,6 +1010,67 @@
             }
         }
 
+        /* 작업 버튼 스타일 */
+        .action-cell {
+            min-width: 180px;
+            padding: 8px !important;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            min-width: 50px;
+            white-space: nowrap;
+        }
+
+        .view-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .view-btn:hover {
+            background-color: #1976D2;
+            transform: translateY(-1px);
+        }
+
+        .edit-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background-color: #F57C00;
+            transform: translateY(-1px);
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background-color: #d32f2f;
+            transform: translateY(-1px);
+        }
+
+        .action-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
 
     </style>
 </head>
@@ -1992,6 +2053,7 @@
             // 지정된 순서로 컬럼 생성
             const orderedColumns = [
                 'InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector',
+                'Actions',
                 'FinalResult', 'ApparentDensityResult', 'FlowRateResult', 'CContentResult',
                 'CuContentResult', 'NiContentResult', 'MoContentResult', 'ParticleSizeResult',
                 'FormingLoadResult', 'FormingStrengthResult', 'SinterChangeRateResult',
@@ -2005,6 +2067,8 @@
                 // 헤더에도 동일한 클래스 적용
                 if (['InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector'].includes(column)) {
                     th.className = 'basic-info-cell';
+                } else if (column === 'Actions') {  
+                    th.className = 'action-cell';
                 } else if (column === 'FinalResult') {
                     th.className = 'final-result-cell';
                 } else {
@@ -2030,7 +2094,64 @@
             }
         }
 
-       
+        // 작업 버튼 셀 생성 함수 (새로 추가)
+        function createActionButtonsCell(powderName, lotNumber) {
+            const cell = document.createElement('td');
+            cell.className = 'action-buttons';
+            
+            // 조회 버튼
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'action-btn view-btn';
+            viewBtn.textContent = '조회';
+            viewBtn.onclick = function(e) {
+                e.stopPropagation();
+                loadInspectionDetail(powderName, lotNumber);
+            };
+            
+            // 수정 버튼
+            const editBtn = document.createElement('button');
+            editBtn.className = 'action-btn edit-btn';
+            editBtn.textContent = '수정';
+            editBtn.onclick = function(e) {
+                e.stopPropagation();
+                editInspection(powderName, lotNumber);
+            };
+            
+            // 삭제 버튼
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'action-btn delete-btn';
+            deleteBtn.textContent = '삭제';
+            deleteBtn.onclick = function(e) {
+                e.stopPropagation();
+                deleteInspection(powderName, lotNumber);
+            };
+            
+            cell.appendChild(viewBtn);
+            cell.appendChild(editBtn);
+            cell.appendChild(deleteBtn);
+            
+            return cell;
+        }
+
+        // 검사 상세 조회 함수 (조회 버튼용)
+        function loadInspectionDetail(powderName, lotNumber) {
+            console.log('검사 상세 조회:', powderName, lotNumber);
+            
+            // 검사 상세 데이터 조회
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        displayInspectionDetail(result.data);
+                    } else {
+                        alert('검사 상세 데이터를 찾을 수 없습니다.');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('검사 상세 조회 중 오류가 발생했습니다: ' + error.toString());
+                })
+                .getInspectionDetail(powderName, lotNumber);
+        }
+
         // 검색 결과 테이블 바디 생성
         function createSearchTableBody(results) {
             const tbody = document.getElementById('searchTableBody');
@@ -2042,6 +2163,7 @@
                 // 지정된 순서로 데이터 추가
                 const orderedColumns = [
                     'InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector',
+                    'Actions',
                     'FinalResult', 'ApparentDensityResult', 'FlowRateResult', 'CContentResult',
                     'CuContentResult', 'NiContentResult', 'MoContentResult', 'ParticleSizeResult',
                     'FormingLoadResult', 'FormingStrengthResult', 'SinterChangeRateResult',
@@ -2049,7 +2171,11 @@
                 ];
                 
                 orderedColumns.forEach(column => {
-                    if (column === 'ParticleSizeResult') {
+                    if (column === 'Actions') {
+                        const actionCell = createActionButtonsCell(result.PowderName, result.LotNumber);
+                        actionCell.className = 'action-cell';
+                        row.appendChild(actionCell);
+                    } else if (column === 'ParticleSizeResult') {
                         // 입도분석 결과 통합 처리
                         const particleSizeCell = createParticleSizeResultCell(result);
                         particleSizeCell.className = 'result-column';
@@ -2163,6 +2289,7 @@
                 'PowderName': '분말명',
                 'LotNumber': 'LOT번호',
                 'Inspector': '검사자',
+                'Actions': '작업',
                 'FinalResult': '최종결과',
                 'ApparentDensityResult': '겉보기밀도',
                 'FlowRateResult': '유동도',
@@ -3006,6 +3133,237 @@
                     currentInspectionData.lotNumber,
                     values
                 );
+        }
+
+        // ========== 수정/삭제 기능 함수들 ==========
+
+        // 검사 결과 수정 함수
+        function editInspection(powderName, lotNumber) {
+            if (!confirm(`${powderName} (LOT: ${lotNumber})의 검사 결과를 수정하시겠습니까?`)) {
+                return;
+            }
+            
+            // 검사 데이터 로드
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result.success) {
+                        // 검사 데이터를 현재 검사 데이터로 설정
+                        currentInspectionData = {
+                            powderName: result.data.PowderName,
+                            lotNumber: result.data.LotNumber,
+                            inspector: result.data.Inspector,
+                            inspectionType: result.data.InspectionType,
+                            isEditing: true // 수정 모드 플래그
+                        };
+                        
+                        // 검사 항목 로드
+                        google.script.run
+                            .withSuccessHandler(function(items) {
+                                currentInspectionItems = items;
+                                completedItems = []; // 수정 모드에서는 완료 항목 초기화
+                                
+                                // 검사 페이지로 이동
+                                showPage('inspection');
+                                displayInspectionItems();
+                                
+                                // 기존 데이터 로드
+                                setTimeout(function() {
+                                    loadExistingData(result.data);
+                                    updateInspectionProgress();
+                                }, 300);
+                            })
+                            .withFailureHandler(function(error) {
+                                alert('검사 항목 로드 실패: ' + error);
+                            })
+                            .getInspectionItems(powderName, result.data.InspectionType);
+                    } else {
+                        alert(result.message || '검사 데이터를 불러올 수 없습니다.');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('데이터 로드 중 오류 발생: ' + error);
+                })
+                .getInspectionDetail(powderName, lotNumber);
+        }
+
+        // 기존 데이터를 입력 필드에 로드하는 함수
+        function loadExistingData(data) {
+            console.log('기존 데이터 로드 시작:', data);
+            
+            // 각 검사 항목별로 데이터 로드
+            currentInspectionItems.forEach(item => {
+                const itemName = item.name;
+                
+                if (itemName === 'ParticleSize') {
+                    // 입도분석 데이터 로드
+                    loadParticleSizeData(data);
+                } else if (itemName === 'ApparentDensity') {
+                    // 겉보기밀도 데이터 로드
+                    loadApparentDensityData(data);
+                } else {
+                    // 일반 항목 데이터 로드
+                    loadGeneralItemData(itemName, data);
+                }
+            });
+        }
+
+        // 일반 항목 데이터 로드
+        function loadGeneralItemData(itemName, data) {
+            let hasData = false;
+            
+            for (let i = 1; i <= 3; i++) {
+                const colName = itemName + i;
+                const inputElement = document.getElementById(`${itemName}-${i}`);
+                
+                if (inputElement && data[colName] !== undefined && data[colName] !== '') {
+                    inputElement.value = data[colName];
+                    hasData = true;
+                }
+            }
+            
+            // 데이터가 있으면 평균 계산
+            if (hasData) {
+                calculateAverage(itemName);
+            }
+        }
+
+        // 겉보기밀도 데이터 로드
+        function loadApparentDensityData(data) {
+            let hasData = false;
+            
+            // 원본 데이터(빈컵중량, 분말중량) 로드
+            for (let i = 1; i <= 3; i++) {
+                const emptyCupCol = 'ApparentDensity_EmptyCup' + i;
+                const powderWeightCol = 'ApparentDensity_PowderWeight' + i;
+                
+                const emptyCupInput = document.getElementById('ApparentDensity-emptyCup' + i);
+                const powderWeightInput = document.getElementById('ApparentDensity-powderWeight' + i);
+                
+                // 원본 데이터가 있는 경우 (새 형식)
+                if (data[emptyCupCol] !== undefined && data[emptyCupCol] !== '') {
+                    if (emptyCupInput) {
+                        emptyCupInput.value = data[emptyCupCol];
+                        hasData = true;
+                    }
+                }
+                
+                if (data[powderWeightCol] !== undefined && data[powderWeightCol] !== '') {
+                    if (powderWeightInput) {
+                        powderWeightInput.value = data[powderWeightCol];
+                        hasData = true;
+                    }
+                }
+            }
+            
+            // 원본 데이터가 있으면 계산
+            if (hasData) {
+                calculateApparentDensity('ApparentDensity');
+            } else {
+                // 원본 데이터가 없는 경우 (구 형식) - 수정 불가 처리
+                for (let i = 1; i <= 3; i++) {
+                    const emptyCupInput = document.getElementById('ApparentDensity-emptyCup' + i);
+                    const powderWeightInput = document.getElementById('ApparentDensity-powderWeight' + i);
+                    
+                    if (emptyCupInput) {
+                        emptyCupInput.disabled = true;
+                        emptyCupInput.style.backgroundColor = '#f5f5f5';
+                        emptyCupInput.placeholder = '구버전 데이터';
+                    }
+                    if (powderWeightInput) {
+                        powderWeightInput.disabled = true;
+                        powderWeightInput.style.backgroundColor = '#f5f5f5';
+                        powderWeightInput.placeholder = '구버전 데이터';
+                    }
+                    
+                    // 계산된 값만 표시
+                    const densityCol = 'ApparentDensity' + i;
+                    if (data[densityCol] !== undefined && data[densityCol] !== '') {
+                        const calculatedDiv = document.getElementById('ApparentDensity-calculated' + i);
+                        if (calculatedDiv) {
+                            calculatedDiv.textContent = parseFloat(data[densityCol]).toFixed(3) + ' g/cm³';
+                        }
+                    }
+                }
+                
+                // 저장 버튼 비활성화
+                const saveBtn = document.getElementById('ApparentDensity-save');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = '구버전 데이터';
+                    saveBtn.className = 'save-btn saved';
+                }
+                
+                // 평균값 표시
+                if (data.ApparentDensityAvg) {
+                    const avgSpan = document.getElementById('ApparentDensity-avg');
+                    if (avgSpan) avgSpan.textContent = parseFloat(data.ApparentDensityAvg).toFixed(3);
+                }
+                
+                // 결과 표시
+                if (data.ApparentDensityResult) {
+                    const resultDiv = document.getElementById('ApparentDensity-result');
+                    if (resultDiv) {
+                        resultDiv.className = data.ApparentDensityResult === 'PASS' ? 'result-status pass' : 'result-status fail';
+                        resultDiv.textContent = data.ApparentDensityResult === 'PASS' ? '합격' : '불합격';
+                    }
+                }
+            }
+        }
+
+        // 입도분석 데이터 로드
+        function loadParticleSizeData(data) {
+            const meshIds = ['80', '100', '150', '200', '325', '325M'];
+            let hasData = false;
+            
+            meshIds.forEach(meshId => {
+                const val1Col = 'ParticleSize' + meshId + '_1';
+                const val2Col = 'ParticleSize' + meshId + '_2';
+                
+                const input1 = document.getElementById('ParticleSize' + meshId + '-1');
+                const input2 = document.getElementById('ParticleSize' + meshId + '-2');
+                
+                if (input1 && data[val1Col] !== undefined && data[val1Col] !== '') {
+                    input1.value = data[val1Col];
+                    hasData = true;
+                }
+                
+                if (input2 && data[val2Col] !== undefined && data[val2Col] !== '') {
+                    input2.value = data[val2Col];
+                    hasData = true;
+                }
+            });
+            
+            // 데이터가 있으면 평균 계산
+            if (hasData) {
+                calculateParticleSizeAverages();
+            }
+        }
+
+        // 검사 결과 삭제 함수
+        function deleteInspection(powderName, lotNumber) {
+            if (!confirm(`${powderName} (LOT: ${lotNumber})의 검사 결과를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+                return;
+            }
+            
+            // 한 번 더 확인
+            if (!confirm('정말로 삭제하시겠습니까?')) {
+                return;
+            }
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result.success) {
+                        alert('삭제되었습니다.');
+                        // 검색 결과 새로고침
+                        performSearch();
+                    } else {
+                        alert(result.message || '삭제 실패');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('삭제 중 오류 발생: ' + error);
+                })
+                .deleteInspectionResult(powderName, lotNumber);
         }
 
     </script>
