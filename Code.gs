@@ -368,36 +368,69 @@ function getIncompleteInspections() {
 function getExistingInspection(powderName, lotNumber) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('InspectionProgress');
-    
-    if (!sheet) return null;
-    
-    const data = sheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
-        try {
-          const startTime = data[i][4]
-            ? Utilities.formatDate(new Date(data[i][4]), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss")
+    const progressSheet = ss.getSheetByName('InspectionProgress');
+
+    // 1. InspectionProgress 시트에서 먼저 검색 (진행중인 검사)
+    if (progressSheet) {
+      const data = progressSheet.getDataRange().getValues();
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
+          try {
+            const startTime = data[i][4]
+              ? Utilities.formatDate(new Date(data[i][4]), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss")
+              : "";
+
+            return {
+              powderName: data[i][0],
+              lotNumber: data[i][1],
+              inspectionType: data[i][2],
+              inspector: data[i][3],
+              startTime: startTime,
+              completedItems: data[i][5] ? JSON.parse(data[i][5]) : [],
+              totalItems: data[i][6] ? JSON.parse(data[i][6]) : [],
+              progress: String(data[i][7] || '0/0'),  // 문자열로 강제 변환
+              isCompleted: false
+            };
+          } catch (parseError) {
+            Logger.log('기존 검사 JSON 파싱 오류: ' + parseError.toString());
+            return null;
+          }
+        }
+      }
+    }
+
+    // 2. InspectionProgress에서 찾지 못하면 InspectionResult에서 검색 (완료된 검사)
+    const resultSheet = ss.getSheetByName('InspectionResult');
+    if (resultSheet) {
+      const data = resultSheet.getDataRange().getValues();
+      const headers = data[0];
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
+          const inspectionTimeIndex = headers.indexOf('InspectionTime');
+          const inspectionTypeIndex = headers.indexOf('InspectionType');
+          const inspectorIndex = headers.indexOf('Inspector');
+
+          const startTime = data[i][inspectionTimeIndex]
+            ? Utilities.formatDate(new Date(data[i][inspectionTimeIndex]), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss")
             : "";
 
           return {
             powderName: data[i][0],
             lotNumber: data[i][1],
-            inspectionType: data[i][2],
-            inspector: data[i][3],
+            inspectionType: data[i][inspectionTypeIndex] || '',
+            inspector: data[i][inspectorIndex] || '',
             startTime: startTime,
-            completedItems: data[i][5] ? JSON.parse(data[i][5]) : [],
-            totalItems: data[i][6] ? JSON.parse(data[i][6]) : [],
-            progress: String(data[i][7] || '0/0')  // 문자열로 강제 변환
+            completedItems: [],  // 완료된 검사는 빈 배열
+            totalItems: [],
+            progress: '완료',
+            isCompleted: true  // 완료된 검사 표시
           };
-        } catch (parseError) {
-          Logger.log('기존 검사 JSON 파싱 오류: ' + parseError.toString());
-          return null;
         }
       }
     }
-    
+
     return null;
   } catch (error) {
     Logger.log('getExistingInspection 오류: ' + error.toString());
@@ -719,11 +752,21 @@ function updateInspectionProgress(powderName, lotNumber, itemName) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName('InspectionProgress');
+
+    if (!sheet) {
+      Logger.log('InspectionProgress 시트를 찾을 수 없습니다. 완료된 검사일 수 있습니다.');
+      // 완료된 검사는 최종 결과만 업데이트
+      updateFinalResult(powderName, lotNumber);
+      return;
+    }
+
     const data = sheet.getDataRange().getValues();
-    
+    let found = false;
+
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
-        
+        found = true;
+
         let completedItems;
         try {
           completedItems = JSON.parse(data[i][5]);
@@ -734,31 +777,38 @@ function updateInspectionProgress(powderName, lotNumber, itemName) {
         }
 
         const totalItems = data[i][6] ? JSON.parse(data[i][6]) : [];
-        
+
         if (!completedItems.includes(itemName)) {
           completedItems.push(itemName);
         }
-        
+
         const progress = `${completedItems.length}/${totalItems.length}`;
-        
+
         sheet.getRange(i + 1, 6).setValue(JSON.stringify(completedItems));
-        
+
         // Progress 셀에 명시적으로 텍스트 형식 설정
         const progressCell = sheet.getRange(i + 1, 8);
         progressCell.setNumberFormat('@');  // 텍스트 형식으로 설정
         progressCell.setValue(progress);
-       
+
         // 모든 항목 완료 시 진행중검사에서 제거
         if (completedItems.length === totalItems.length) {
           sheet.deleteRow(i + 1);
-          
+
           // 최종 결과 업데이트
           updateFinalResult(powderName, lotNumber);
         }
-        
+
         break;
       }
     }
+
+    // InspectionProgress에서 찾지 못한 경우 (완료된 검사)
+    if (!found) {
+      Logger.log('InspectionProgress에서 검사를 찾을 수 없습니다. 완료된 검사로 최종 결과만 업데이트합니다.');
+      updateFinalResult(powderName, lotNumber);
+    }
+
   } catch (error) {
     Logger.log('updateInspectionProgress 오류: ' + error.toString());
   }
