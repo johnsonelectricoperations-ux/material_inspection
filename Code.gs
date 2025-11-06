@@ -700,7 +700,7 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
           sheet.getRange(rowIndex, powderWeightCol).setValue(powderWeight || '');
         }
         
-        // 계산된 겉보기밀도 저장
+        // 계산된 겉보기밀도 저장 (소수점 2자리)
         const densityCol = headers.indexOf('ApparentDensity' + (i + 1)) + 1;
         if (densityCol > 0) {
           if (emptyCup !== '' && powderWeight !== '') {
@@ -708,7 +708,7 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
             const powderWeightNum = parseFloat(powderWeight);
             if (!isNaN(emptyCupNum) && !isNaN(powderWeightNum)) {
               const apparentDensity = (powderWeightNum - emptyCupNum) / 25;
-              sheet.getRange(rowIndex, densityCol).setValue(apparentDensity);
+              sheet.getRange(rowIndex, densityCol).setValue(parseFloat(apparentDensity.toFixed(2)));
             } else {
               sheet.getRange(rowIndex, densityCol).setValue('');
             }
