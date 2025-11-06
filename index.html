@@ -553,6 +553,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             font-weight: bold;
+            text-align: center;
         }
         
         .results-table tr:nth-child(even) {
@@ -2257,23 +2258,14 @@
         // 검사 결과 셀 생성 (수정된 버전)
         function createSearchResultCell(result, columnName = '') {
             const cell = document.createElement('td');
-            
+
             if (result === 'PASS' || result === 'FAIL') {
                 const span = document.createElement('span');
                 span.className = `result-status ${result.toLowerCase()}`;
                 span.textContent = result === 'PASS' ? 'OK' : 'NG';
                 span.style.fontSize = '0.8em';
                 span.style.padding = '4px 8px';
-                
-                // 최종결과인 경우 클릭 이벤트 추가
-                if (columnName === 'FinalResult') {
-                    span.style.cursor = 'pointer';
-                    span.title = '클릭하여 상세 검사값 보기';
-                    span.onclick = function() {
-                        showInspectionDetail(this.closest('tr'));
-                    };
-                }
-                
+
                 cell.appendChild(span);
             } else {
                 cell.textContent = '-';
