@@ -2872,6 +2872,15 @@
             ];
             
             inspectionItems.forEach(item => {
+                // 비활성 항목은 표시하지 않음
+                if (inspectionData.powderSpec) {
+                    const typeColumn = item.name + 'Type';
+                    const itemType = inspectionData.powderSpec[typeColumn];
+                    if (itemType === '비활성') {
+                        return; // 비활성 항목 건너뛰기
+                    }
+                }
+
                 if (item.isParticleSize) {
                     const particleSizeCard = createParticleSizeDetailCard(item, inspectionData);
                     container.appendChild(particleSizeCard);
@@ -2953,25 +2962,31 @@
 
             const meshIds = ['180', '150', '106', '75', '45', '45M'];
             let meshResults = '';
-            let overallResult = 'PASS';
-            
+            let hasAnyData = false;  // 데이터 존재 여부 확인용
+            let hasAnyFail = false;  // FAIL 존재 여부 확인용
+
             // 입도분석 규격 정보 가져오기
             let particleSizeSpecs = [];
             if (inspectionData.powderSpec) {
                 // ParticleSize 규격이 있는지 확인 (실제 구현에서는 별도 함수 필요)
                 // 여기서는 기본 구조만 제시
             }
-            
+
             meshIds.forEach(meshId => {
                 const val1 = inspectionData[`ParticleSize${meshId}_1`] || '';
                 const val2 = inspectionData[`ParticleSize${meshId}_2`] || '';
                 const avg = inspectionData[`ParticleSize${meshId}_Avg`] || '';
                 const result = inspectionData[`ParticleSize${meshId}_Result`] || '';
-                
-                if (result === 'FAIL') {
-                    overallResult = 'FAIL';
+
+                // 데이터가 있는지 확인
+                if (val1 !== '' || val2 !== '' || avg !== '' || result !== '') {
+                    hasAnyData = true;
                 }
-                
+
+                if (result === 'FAIL') {
+                    hasAnyFail = true;
+                }
+
                 const resultClass = result === 'PASS' ? 'pass' : (result === 'FAIL' ? 'fail' : '');
                 const resultText = result === 'PASS' ? '합격' : (result === 'FAIL' ? '불합격' : '대기중');
                 
@@ -3018,19 +3033,31 @@
                 `;
             });
             
-            const overallResultClass = overallResult === 'PASS' ? 'pass' : 'fail';
-            const overallResultText = overallResult === 'PASS' ? '합격' : '불합격';
-            
+            // 데이터 유무에 따른 전체 결과 결정
+            let overallResultClass = '';
+            let overallResultText = '';
+
+            if (!hasAnyData) {
+                overallResultClass = '';
+                overallResultText = '데이터 없음';
+            } else if (hasAnyFail) {
+                overallResultClass = 'fail';
+                overallResultText = '불합격';
+            } else {
+                overallResultClass = 'pass';
+                overallResultText = '합격';
+            }
+
             card.innerHTML = `
                 <div class="card-header">
                     <div class="item-name">${item.displayName}</div>
                     <div class="spec-range">입도분석 상세 결과</div>
                 </div>
-                
+
                 <div class="particle-size-inputs">
                     ${meshResults}
                 </div>
-                
+
                 <div class="detail-result-display ${overallResultClass}">
                     <div class="avg-result">
                         <div style="text-align: center; margin-bottom: 10px;">
