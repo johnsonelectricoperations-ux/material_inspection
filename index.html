@@ -2813,17 +2813,19 @@
                     unit: '%',
                     specColumns: ['CuContentMin', 'CuContentMax']
                 },
-                { 
-                    name: 'NiContent', 
-                    displayName: 'Ni함량', 
+                {
+                    name: 'Moisture',
+                    displayName: '수분도',
                     unit: '%',
-                    specColumns: ['NiContentMin', 'NiContentMax']
+                    specColumns: ['MoistureMin', 'MoistureMax'],
+                    isWeightBased: true
                 },
-                { 
-                    name: 'MoContent', 
-                    displayName: 'Mo함량', 
+                {
+                    name: 'Ash',
+                    displayName: '회분도',
                     unit: '%',
-                    specColumns: ['MoContentMin', 'MoContentMax']
+                    specColumns: ['AshMin', 'AshMax'],
+                    isWeightBased: true
                 },
                 { 
                     name: 'SinterChangeRate', 
