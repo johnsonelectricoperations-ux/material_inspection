@@ -553,6 +553,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             font-weight: bold;
+            text-align: center;
         }
         
         .results-table tr:nth-child(even) {
@@ -1143,7 +1144,7 @@
                         <span id="inspectionInspector">-</span>
                     </div>
                 </div>
-                <button class="nav-btn" onclick="showPage('dashboard')">대시보드로 돌아가기</button>
+                <button class="nav-btn" id="backToDashboardBtn" onclick="showPage('dashboard')">대시보드로 돌아가기</button>
             </div>
             
             <div class="dashboard-section" style="margin-bottom: 20px;">
@@ -1561,17 +1562,26 @@
             currentInspectionData = result.data;
             currentInspectionItems = result.items;
             completedItems = currentInspectionData.completedItems || [];
-            
+
             // 검사 정보 표시
             document.getElementById('inspectionPowderName').textContent = currentInspectionData.powderName;
             document.getElementById('inspectionLotNumber').textContent = currentInspectionData.lotNumber;
             document.getElementById('inspectionType').textContent = currentInspectionData.inspectionType;
             document.getElementById('inspectionInspector').textContent = currentInspectionData.inspector;
-            
+
+            // 버튼을 기본 상태로 리셋 (새 검사 시작 모드)
+            const backBtn = document.getElementById('backToDashboardBtn');
+            if (backBtn) {
+                backBtn.textContent = '대시보드로 돌아가기';
+                backBtn.onclick = function() {
+                    showPage('dashboard');
+                };
+            }
+
             // 검사 항목 표시
             displayInspectionItems();
             updateInspectionProgress();
-            
+
             // 검사 페이지로 이동
             showPage('inspection');
         }
@@ -1728,34 +1738,53 @@
 
 
         // 평균 계산 및 합격/불합격 판정
+        // 항목별 소수점 자릿수 반환
+        function getDecimalPlaces(itemName) {
+            const decimalPlacesMap = {
+                'FlowRate': 2,
+                'ApparentDensity': 2,
+                'CContent': 2,
+                'CuContent': 2,
+                'NiContent': 2,
+                'MoContent': 2,
+                'SinterChangeRate': 2,
+                'SinterStrength': 1,
+                'FormingStrength': 1,
+                'FormingLoad': 1,
+                'ParticleSize': 1
+            };
+            return decimalPlacesMap[itemName] || 2; // 기본값 2자리
+        }
+
         function calculateAverage(itemName) {
             const val1 = parseFloat(document.getElementById(itemName + '-1').value) || null;
             const val2 = parseFloat(document.getElementById(itemName + '-2').value) || null;
             const val3 = parseFloat(document.getElementById(itemName + '-3').value) || null;
-            
+
             const values = [val1, val2, val3].filter(v => v !== null);
-            
+
             if (values.length === 0) {
                 document.getElementById(itemName + '-avg').textContent = '-';
                 document.getElementById(itemName + '-result').textContent = '대기중';
                 document.getElementById(itemName + '-result').className = 'result-status pending';
                 return;
             }
-            
+
             const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-            document.getElementById(itemName + '-avg').textContent = average.toFixed(3);
-            
+            const decimalPlaces = getDecimalPlaces(itemName);
+            document.getElementById(itemName + '-avg').textContent = average.toFixed(decimalPlaces);
+
             // 합격/불합격 판정
             const item = currentInspectionItems.find(item => item.name === itemName);
             let result = 'PASS';
-            
+
             if (item.min !== '' && average < parseFloat(item.min)) {
                 result = 'FAIL';
             }
             if (item.max !== '' && average > parseFloat(item.max)) {
                 result = 'FAIL';
             }
-            
+
             const resultElement = document.getElementById(itemName + '-result');
             if (result === 'PASS') {
                 resultElement.textContent = '합격';
@@ -1770,9 +1799,9 @@
         function calculateParticleSizeAverage(meshId) {
             const val1 = parseFloat(document.getElementById(`ParticleSize${meshId}-1`).value) || null;
             const val2 = parseFloat(document.getElementById(`ParticleSize${meshId}-2`).value) || null;
-            
+
             const values = [val1, val2].filter(v => v !== null);
-            
+
             if (values.length === 0) {
                 document.getElementById(`ParticleSize${meshId}-avg`).textContent = '-';
                 document.getElementById(`ParticleSize${meshId}-result`).textContent = '대기중';
@@ -1780,10 +1809,10 @@
                 updateParticleSizeOverallResult();
                 return;
             }
-            
+
             const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-            document.getElementById(`ParticleSize${meshId}-avg`).textContent = average.toFixed(2);
-            
+            document.getElementById(`ParticleSize${meshId}-avg`).textContent = average.toFixed(1);
+
             // 합격/불합격 판정 (별도 함수에서 처리)
             checkParticleSizeMeshResult(meshId, average);
             updateParticleSizeOverallResult();
@@ -1849,21 +1878,21 @@
         // 겉보기밀도 계산 함수
         function calculateApparentDensity(itemName) {
             const apparentDensities = [];
-            
+
             // 1차, 2차, 3차 각각 계산
             for (let i = 1; i <= 3; i++) {
                 const emptyCupWeight = parseFloat(document.getElementById(itemName + '-emptyCup' + i).value) || null;
                 const powderWeight = parseFloat(document.getElementById(itemName + '-powderWeight' + i).value) || null;
-                
+
                 if (emptyCupWeight !== null && powderWeight !== null) {
                     const apparentDensity = (powderWeight - emptyCupWeight) / 25;
                     apparentDensities.push(apparentDensity);
-                    document.getElementById(itemName + '-calculated' + i).textContent = apparentDensity.toFixed(3);
+                    document.getElementById(itemName + '-calculated' + i).textContent = apparentDensity.toFixed(2);
                 } else {
                     document.getElementById(itemName + '-calculated' + i).textContent = '-';
                 }
             }
-            
+
             // 평균 계산
             if (apparentDensities.length === 0) {
                 document.getElementById(itemName + '-avg').textContent = '-';
@@ -1871,21 +1900,21 @@
                 document.getElementById(itemName + '-result').className = 'result-status pending';
                 return;
             }
-            
+
             const average = apparentDensities.reduce((sum, val) => sum + val, 0) / apparentDensities.length;
-            document.getElementById(itemName + '-avg').textContent = average.toFixed(3);
-            
+            document.getElementById(itemName + '-avg').textContent = average.toFixed(2);
+
             // 합격/불합격 판정
             const item = currentInspectionItems.find(item => item.name === itemName);
             let result = 'PASS';
-            
+
             if (item.min !== '' && average < parseFloat(item.min)) {
                 result = 'FAIL';
             }
             if (item.max !== '' && average > parseFloat(item.max)) {
                 result = 'FAIL';
             }
-            
+
             const resultElement = document.getElementById(itemName + '-result');
             if (result === 'PASS') {
                 resultElement.textContent = '합격';
@@ -2257,23 +2286,14 @@
         // 검사 결과 셀 생성 (수정된 버전)
         function createSearchResultCell(result, columnName = '') {
             const cell = document.createElement('td');
-            
+
             if (result === 'PASS' || result === 'FAIL') {
                 const span = document.createElement('span');
                 span.className = `result-status ${result.toLowerCase()}`;
                 span.textContent = result === 'PASS' ? 'OK' : 'NG';
                 span.style.fontSize = '0.8em';
                 span.style.padding = '4px 8px';
-                
-                // 최종결과인 경우 클릭 이벤트 추가
-                if (columnName === 'FinalResult') {
-                    span.style.cursor = 'pointer';
-                    span.title = '클릭하여 상세 검사값 보기';
-                    span.onclick = function() {
-                        showInspectionDetail(this.closest('tr'));
-                    };
-                }
-                
+
                 cell.appendChild(span);
             } else {
                 cell.textContent = '-';
@@ -3161,11 +3181,20 @@
                             .withSuccessHandler(function(items) {
                                 currentInspectionItems = items;
                                 completedItems = []; // 수정 모드에서는 완료 항목 초기화
-                                
+
                                 // 검사 페이지로 이동
                                 showPage('inspection');
                                 displayInspectionItems();
-                                
+
+                                // 수정 모드일 때 버튼 텍스트 변경
+                                const backBtn = document.getElementById('backToDashboardBtn');
+                                if (backBtn) {
+                                    backBtn.textContent = '검사결과 조회로 돌아가기';
+                                    backBtn.onclick = function() {
+                                        showPage('search');
+                                    };
+                                }
+
                                 // 기존 데이터 로드
                                 setTimeout(function() {
                                     loadExistingData(result.data);
