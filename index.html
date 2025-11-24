@@ -2268,16 +2268,28 @@
         // 입도분석 결과 통합 함수 (새로 추가)
         function createParticleSizeResultCell(result) {
             const cell = document.createElement('td');
-            
-            // 입도분석 관련 컬럼들 확인
+
+            // 먼저 전체 결과 컬럼 확인
+            if (result['ParticleSizeResult']) {
+                const span = document.createElement('span');
+                const isPass = result['ParticleSizeResult'] === 'PASS';
+                span.className = `result-status ${isPass ? 'pass' : 'fail'}`;
+                span.textContent = isPass ? 'OK' : 'NG';
+                span.style.fontSize = '0.8em';
+                span.style.padding = '4px 8px';
+                cell.appendChild(span);
+                return cell;
+            }
+
+            // 전체 결과가 없으면 개별 MESH 결과 확인 (컬럼명에 언더스코어 포함)
             const particleSizeColumns = [
-                'ParticleSize180Result', 'ParticleSize150Result', 'ParticleSize106Result',
-                'ParticleSize75Result', 'ParticleSize45Result', 'ParticleSize45MResult'
+                'ParticleSize180_Result', 'ParticleSize150_Result', 'ParticleSize106_Result',
+                'ParticleSize75_Result', 'ParticleSize45_Result', 'ParticleSize45M_Result'
             ];
-            
+
             let allPass = true;
             let hasData = false;
-            
+
             particleSizeColumns.forEach(column => {
                 if (result[column]) {
                     hasData = true;
@@ -2286,7 +2298,7 @@
                     }
                 }
             });
-            
+
             if (!hasData) {
                 cell.textContent = '-';
             } else {
@@ -2297,7 +2309,7 @@
                 span.style.padding = '4px 8px';
                 cell.appendChild(span);
             }
-            
+
             return cell;
         }
         
