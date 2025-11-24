@@ -278,7 +278,7 @@ function getInspectionItems(powderName, inspectionType) {
       {name: 'SinterChangeRate', displayName: '소결변화율', columns: ['SinterChangeRateMin', 'SinterChangeRateMax'], typeColumn: 'SinterChangeRateType', unit: '%'},
       {name: 'SinterStrength', displayName: '소결강도', columns: ['SinterStrengthMin', 'SinterStrengthMax'], typeColumn: 'SinterStrengthType', unit: 'MPa'},
       {name: 'FormingStrength', displayName: '성형강도', columns: ['FormingStrengthMin', 'FormingStrengthMax'], typeColumn: 'FormingStrengthType', unit: 'N'},
-      {name: 'FormingLoad', displayName: '성형하중', columns: ['FormingLoadMin', 'FormingLoadMax'], typeColumn: 'FormingLoadType', unit: 'kN'},
+      {name: 'FormingLoad', displayName: '성형하중', columns: ['FormingLoadMin', 'FormingLoadMax'], typeColumn: 'FormingLoadType', unit: 'MPa'},
       {name: 'ParticleSize', displayName: '입도분석', columns: [], typeColumn: 'ParticleSizeType', unit: '%', isParticleSize: true}
     ];
     
