@@ -368,36 +368,69 @@ function getIncompleteInspections() {
 function getExistingInspection(powderName, lotNumber) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('InspectionProgress');
-    
-    if (!sheet) return null;
-    
-    const data = sheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
-        try {
-          const startTime = data[i][4]
-            ? Utilities.formatDate(new Date(data[i][4]), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss")
+    const progressSheet = ss.getSheetByName('InspectionProgress');
+
+    // 1. InspectionProgress 시트에서 먼저 검색 (진행중인 검사)
+    if (progressSheet) {
+      const data = progressSheet.getDataRange().getValues();
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
+          try {
+            const startTime = data[i][4]
+              ? Utilities.formatDate(new Date(data[i][4]), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss")
+              : "";
+
+            return {
+              powderName: data[i][0],
+              lotNumber: data[i][1],
+              inspectionType: data[i][2],
+              inspector: data[i][3],
+              startTime: startTime,
+              completedItems: data[i][5] ? JSON.parse(data[i][5]) : [],
+              totalItems: data[i][6] ? JSON.parse(data[i][6]) : [],
+              progress: String(data[i][7] || '0/0'),  // 문자열로 강제 변환
+              isCompleted: false
+            };
+          } catch (parseError) {
+            Logger.log('기존 검사 JSON 파싱 오류: ' + parseError.toString());
+            return null;
+          }
+        }
+      }
+    }
+
+    // 2. InspectionProgress에서 찾지 못하면 InspectionResult에서 검색 (완료된 검사)
+    const resultSheet = ss.getSheetByName('InspectionResult');
+    if (resultSheet) {
+      const data = resultSheet.getDataRange().getValues();
+      const headers = data[0];
+
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
+          const inspectionTimeIndex = headers.indexOf('InspectionTime');
+          const inspectionTypeIndex = headers.indexOf('InspectionType');
+          const inspectorIndex = headers.indexOf('Inspector');
+
+          const startTime = data[i][inspectionTimeIndex]
+            ? Utilities.formatDate(new Date(data[i][inspectionTimeIndex]), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss")
             : "";
 
           return {
             powderName: data[i][0],
             lotNumber: data[i][1],
-            inspectionType: data[i][2],
-            inspector: data[i][3],
+            inspectionType: data[i][inspectionTypeIndex] || '',
+            inspector: data[i][inspectorIndex] || '',
             startTime: startTime,
-            completedItems: data[i][5] ? JSON.parse(data[i][5]) : [],
-            totalItems: data[i][6] ? JSON.parse(data[i][6]) : [],
-            progress: String(data[i][7] || '0/0')  // 문자열로 강제 변환
+            completedItems: [],  // 완료된 검사는 빈 배열
+            totalItems: [],
+            progress: '완료',
+            isCompleted: true  // 완료된 검사 표시
           };
-        } catch (parseError) {
-          Logger.log('기존 검사 JSON 파싱 오류: ' + parseError.toString());
-          return null;
         }
       }
     }
-    
+
     return null;
   } catch (error) {
     Logger.log('getExistingInspection 오류: ' + error.toString());
@@ -526,6 +559,25 @@ function startInspection(powderName, lotNumber, inspectionType, inspector) {
   }
 }
 
+// 항목별 소수점 자릿수 반환
+function getDecimalPlaces(itemName) {
+  const decimalPlacesMap = {
+    'FlowRate': 2,
+    'ApparentDensity': 2,
+    'CContent': 2,
+    'CuContent': 2,
+    'NiContent': 2,
+    'MoContent': 2,
+    'SinterChangeRate': 2,
+    'SinterStrength': 1,
+    'FormingStrength': 1,
+    'FormingLoad': 1,
+    'ParticleSize': 1
+  };
+
+  return decimalPlacesMap[itemName] || 2; // 기본값 2자리
+}
+
 // 검사 항목 저장
 function saveInspectionItem(powderName, lotNumber, itemName, values) {
   try {
@@ -535,59 +587,63 @@ function saveInspectionItem(powderName, lotNumber, itemName, values) {
     if (itemName === 'ApparentDensity') {
       return saveApparentDensityItem(powderName, lotNumber, values);
     }
-    
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
+
     // 평균 계산
     const validValues = values.filter(v => v !== '' && !isNaN(v)).map(v => parseFloat(v));
     if (validValues.length === 0) {
       return { success: false, message: '유효한 측정값이 없습니다.' };
     }
-    
+
     const average = validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
-    
+
+    // 항목별 소수점 자릿수 적용
+    const decimalPlaces = getDecimalPlaces(itemName);
+    const roundedAverage = parseFloat(average.toFixed(decimalPlaces));
+
     // 규격 확인 및 합격/불합격 판정
     const existingInspection = getExistingInspection(powderName, lotNumber);
     if (!existingInspection) {
       return { success: false, message: '진행중인 검사를 찾을 수 없습니다.' };
     }
-    
+
     const items = getInspectionItems(powderName, existingInspection.inspectionType);
     const currentItem = items.find(item => item.name === itemName);
-    
+
     let result = 'PASS';
     if (currentItem) {
-      if (currentItem.min !== '' && average < parseFloat(currentItem.min)) {
+      if (currentItem.min !== '' && roundedAverage < parseFloat(currentItem.min)) {
         result = 'FAIL';
       }
-      if (currentItem.max !== '' && average > parseFloat(currentItem.max)) {
+      if (currentItem.max !== '' && roundedAverage > parseFloat(currentItem.max)) {
         result = 'FAIL';
       }
     }
-    
+
     // InspectionResult 시트에 저장
     const resultSheet = ss.getSheetByName('InspectionResult');
     const existingRowIndex = findExistingResultRow(powderName, lotNumber);
-    
+
     if (existingRowIndex > 0) {
       // 기존 행 업데이트
-      updateInspectionResult(existingRowIndex, itemName, values, average, result);
+      updateInspectionResult(existingRowIndex, itemName, values, roundedAverage, result);
     } else {
       // 새 행 추가
-      createNewInspectionResult(powderName, lotNumber, itemName, values, average, result);
+      createNewInspectionResult(powderName, lotNumber, itemName, values, roundedAverage, result);
     }
-    
+
     // 진행중검사 시트 업데이트
     updateInspectionProgress(powderName, lotNumber, itemName);
-    
+
     Logger.log('항목 저장 완료');
-    
+
     return {
       success: true,
-      average: average.toFixed(3),
+      average: roundedAverage.toFixed(decimalPlaces),
       result: result
     };
-    
+
   } catch (error) {
     Logger.log('saveInspectionItem 오류: ' + error.toString());
     return {
@@ -644,7 +700,7 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
           sheet.getRange(rowIndex, powderWeightCol).setValue(powderWeight || '');
         }
         
-        // 계산된 겉보기밀도 저장
+        // 계산된 겉보기밀도 저장 (소수점 2자리)
         const densityCol = headers.indexOf('ApparentDensity' + (i + 1)) + 1;
         if (densityCol > 0) {
           if (emptyCup !== '' && powderWeight !== '') {
@@ -652,7 +708,7 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
             const powderWeightNum = parseFloat(powderWeight);
             if (!isNaN(emptyCupNum) && !isNaN(powderWeightNum)) {
               const apparentDensity = (powderWeightNum - emptyCupNum) / 25;
-              sheet.getRange(rowIndex, densityCol).setValue(apparentDensity);
+              sheet.getRange(rowIndex, densityCol).setValue(parseFloat(apparentDensity.toFixed(2)));
             } else {
               sheet.getRange(rowIndex, densityCol).setValue('');
             }
@@ -665,8 +721,8 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
       // 평균 및 결과 저장
       const avgCol = headers.indexOf('ApparentDensityAvg') + 1;
       const resultCol = headers.indexOf('ApparentDensityResult') + 1;
-      
-      if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(average.toFixed(3));
+
+      if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(parseFloat(average.toFixed(2)));
       if (resultCol > 0) sheet.getRange(rowIndex, resultCol).setValue(result);
       
       return;
@@ -678,11 +734,14 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
     const val3Col = headers.indexOf(itemName + '3') + 1;
     const avgCol = headers.indexOf(itemName + 'Avg') + 1;
     const resultCol = headers.indexOf(itemName + 'Result') + 1;
-    
+
+    // 항목별 소수점 자릿수 적용
+    const decimalPlaces = getDecimalPlaces(itemName);
+
     if (val1Col > 0) sheet.getRange(rowIndex, val1Col).setValue(values[0] || '');
     if (val2Col > 0) sheet.getRange(rowIndex, val2Col).setValue(values[1] || '');
     if (val3Col > 0) sheet.getRange(rowIndex, val3Col).setValue(values[2] || '');
-    if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(average.toFixed(3));
+    if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(parseFloat(average.toFixed(decimalPlaces)));
     if (resultCol > 0) sheet.getRange(rowIndex, resultCol).setValue(result);
   } catch (error) {
     Logger.log('updateInspectionResult 오류: ' + error.toString());
@@ -719,11 +778,21 @@ function updateInspectionProgress(powderName, lotNumber, itemName) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName('InspectionProgress');
+
+    if (!sheet) {
+      Logger.log('InspectionProgress 시트를 찾을 수 없습니다. 완료된 검사일 수 있습니다.');
+      // 완료된 검사는 최종 결과만 업데이트
+      updateFinalResult(powderName, lotNumber);
+      return;
+    }
+
     const data = sheet.getDataRange().getValues();
-    
+    let found = false;
+
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === powderName && String(data[i][1]) === String(lotNumber)) {
-        
+        found = true;
+
         let completedItems;
         try {
           completedItems = JSON.parse(data[i][5]);
@@ -734,31 +803,38 @@ function updateInspectionProgress(powderName, lotNumber, itemName) {
         }
 
         const totalItems = data[i][6] ? JSON.parse(data[i][6]) : [];
-        
+
         if (!completedItems.includes(itemName)) {
           completedItems.push(itemName);
         }
-        
+
         const progress = `${completedItems.length}/${totalItems.length}`;
-        
+
         sheet.getRange(i + 1, 6).setValue(JSON.stringify(completedItems));
-        
+
         // Progress 셀에 명시적으로 텍스트 형식 설정
         const progressCell = sheet.getRange(i + 1, 8);
         progressCell.setNumberFormat('@');  // 텍스트 형식으로 설정
         progressCell.setValue(progress);
-       
+
         // 모든 항목 완료 시 진행중검사에서 제거
         if (completedItems.length === totalItems.length) {
           sheet.deleteRow(i + 1);
-          
+
           // 최종 결과 업데이트
           updateFinalResult(powderName, lotNumber);
         }
-        
+
         break;
       }
     }
+
+    // InspectionProgress에서 찾지 못한 경우 (완료된 검사)
+    if (!found) {
+      Logger.log('InspectionProgress에서 검사를 찾을 수 없습니다. 완료된 검사로 최종 결과만 업데이트합니다.');
+      updateFinalResult(powderName, lotNumber);
+    }
+
   } catch (error) {
     Logger.log('updateInspectionProgress 오류: ' + error.toString());
   }
@@ -1147,49 +1223,50 @@ function saveApparentDensityItem(powderName, lotNumber, values) {
       return { success: false, message: '유효한 측정값이 없습니다.' };
     }
     
-    // 평균 계산
+    // 평균 계산 (소수점 2자리로 반올림)
     const average = apparentDensities.reduce((sum, val) => sum + val, 0) / apparentDensities.length;
-    
+    const roundedAverage = parseFloat(average.toFixed(2));
+
     // 기존 검사 확인
     const existingInspection = getExistingInspection(powderName, lotNumber);
     if (!existingInspection) {
       return { success: false, message: '진행중인 검사를 찾을 수 없습니다.' };
     }
-    
+
     // 규격 확인 및 합격/불합격 판정
     const items = getInspectionItems(powderName, existingInspection.inspectionType);
     const currentItem = items.find(item => item.name === 'ApparentDensity');
-    
+
     let result = 'PASS';
     if (currentItem) {
-      if (currentItem.min !== '' && average < parseFloat(currentItem.min)) {
+      if (currentItem.min !== '' && roundedAverage < parseFloat(currentItem.min)) {
         result = 'FAIL';
       }
-      if (currentItem.max !== '' && average > parseFloat(currentItem.max)) {
+      if (currentItem.max !== '' && roundedAverage > parseFloat(currentItem.max)) {
         result = 'FAIL';
       }
     }
-    
+
     // InspectionResult 시트에 저장
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const resultSheet = ss.getSheetByName('InspectionResult');
     const existingRowIndex = findExistingResultRow(powderName, lotNumber);
-    
-    // 저장할 값들: [emptyCup1, powderWeight1, emptyCup2, powderWeight2, emptyCup3, powderWeight3, average]
-    const saveValues = [...values, average];
-    
+
+    // 저장할 값들: [emptyCup1, powderWeight1, emptyCup2, powderWeight2, emptyCup3, powderWeight3, roundedAverage]
+    const saveValues = [...values, roundedAverage];
+
     if (existingRowIndex > 0) {
-      updateInspectionResult(existingRowIndex, 'ApparentDensity', saveValues, average, result);
+      updateInspectionResult(existingRowIndex, 'ApparentDensity', saveValues, roundedAverage, result);
     } else {
-      createNewInspectionResult(powderName, lotNumber, 'ApparentDensity', saveValues, average, result);
+      createNewInspectionResult(powderName, lotNumber, 'ApparentDensity', saveValues, roundedAverage, result);
     }
-    
+
     // 진행중검사 시트 업데이트
     updateInspectionProgress(powderName, lotNumber, 'ApparentDensity');
-    
+
     return {
       success: true,
-      average: average.toFixed(3),
+      average: roundedAverage.toFixed(2),
       result: result
     };
     
