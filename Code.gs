@@ -93,8 +93,8 @@ function initializeSheets() {
       'ApparentDensityMin', 'ApparentDensityMax', 'ApparentDensityType',
       'CContentMin', 'CContentMax', 'CContentType',
       'CuContentMin', 'CuContentMax', 'CuContentType',
-      'NiContentMin', 'NiContentMax', 'NiContentType',
-      'MoContentMin', 'MoContentMax', 'MoContentType',
+      'MoistureMin', 'MoistureMax', 'MoistureType',
+      'AshMin', 'AshMax', 'AshType',
       'SinterChangeRateMin', 'SinterChangeRateMax', 'SinterChangeRateType',
       'SinterStrengthMin', 'SinterStrengthMax', 'SinterStrengthType',
       'FormingStrengthMin', 'FormingStrengthMax', 'FormingStrengthType',
@@ -104,10 +104,11 @@ function initializeSheets() {
     specSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     
     // 샘플 데이터 추가 (Type 컬럼 포함)
+    // 컬럼 순서: PowderName, FlowRate(Min,Max,Type), ApparentDensity(Min,Max,Type), CContent(Min,Max,Type), CuContent(Min,Max,Type), Moisture(Min,Max,Type), Ash(Min,Max,Type), SinterChangeRate(Min,Max,Type), SinterStrength(Min,Max,Type), FormingStrength(Min,Max,Type), FormingLoad(Min,Max,Type), ParticleSizeType
     const sampleData = [
-      ['ABC-100', 25, 35, '일상', 2.5, 3.0, '일상', 0.5, 0.8, '일상', 1.0, 2.0, '정기', '', '', '비활성', 0.3, 0.5, '일상', 5, 8, '정기', 850, 950, '정기', 120, 150, '정기', 180, 220, '정기', '정기'],
-      ['DEF-200', 20, 30, '정기', 2.0, 2.8, '일상', 0.4, 0.7, '일상', '', '', '비활성', 3.0, 5.0, '정기', '', '', '비활성', 4, 7, '일상', 800, 900, '정기', 100, 140, '정기', 160, 200, '정기', '정기'],
-      ['GHI-300', 30, 40, '일상', 3.0, 3.5, '일상', 0.6, 0.9, '일상', 2.0, 3.0, '일상', 1.0, 2.0, '일상', 0.2, 0.4, '정기', 6, 9, '정기', 900, 1000, '정기', 130, 160, '정기', 200, 240, '정기', '정기']
+      ['ABC-100', 25, 35, '일상', 2.5, 3.0, '일상', 0.5, 0.8, '일상', 1.0, 2.0, '정기', 0, 0.5, '일상', 0, 1.0, '정기', 5, 8, '정기', 850, 950, '정기', 120, 150, '정기', 180, 220, '정기', '정기'],
+      ['DEF-200', 20, 30, '정기', 2.0, 2.8, '일상', 0.4, 0.7, '일상', '', '', '비활성', 0, 0.3, '일상', 0, 0.8, '일상', 4, 7, '일상', 800, 900, '정기', 100, 140, '정기', 160, 200, '정기', '정기'],
+      ['GHI-300', 30, 40, '일상', 3.0, 3.5, '일상', 0.6, 0.9, '일상', 2.0, 3.0, '일상', 0, 0.4, '정기', 0, 1.2, '정기', 6, 9, '정기', 900, 1000, '정기', 130, 160, '정기', 200, 240, '정기', '정기']
     ];
     specSheet.getRange(2, 1, sampleData.length, sampleData[0].length).setValues(sampleData);
   }
@@ -126,8 +127,14 @@ function initializeSheets() {
       'ApparentDensityAvg', 'ApparentDensityResult',
       'CContent1', 'CContent2', 'CContent3', 'CContentAvg', 'CContentResult',
       'CuContent1', 'CuContent2', 'CuContent3', 'CuContentAvg', 'CuContentResult',
-      'NiContent1', 'NiContent2', 'NiContent3', 'NiContentAvg', 'NiContentResult',
-      'MoContent1', 'MoContent2', 'MoContent3', 'MoContentAvg', 'MoContentResult',
+      'Moisture_InitialWeight1', 'Moisture_DriedWeight1', 'Moisture1',
+      'Moisture_InitialWeight2', 'Moisture_DriedWeight2', 'Moisture2',
+      'Moisture_InitialWeight3', 'Moisture_DriedWeight3', 'Moisture3',
+      'MoistureAvg', 'MoistureResult',
+      'Ash_InitialWeight1', 'Ash_AshWeight1', 'Ash1',
+      'Ash_InitialWeight2', 'Ash_AshWeight2', 'Ash2',
+      'Ash_InitialWeight3', 'Ash_AshWeight3', 'Ash3',
+      'AshAvg', 'AshResult',
       'SinterChangeRate1', 'SinterChangeRate2', 'SinterChangeRate3', 'SinterChangeRateAvg', 'SinterChangeRateResult',
       'SinterStrength1', 'SinterStrength2', 'SinterStrength3', 'SinterStrengthAvg', 'SinterStrengthResult',
       'FormingStrength1', 'FormingStrength2', 'FormingStrength3', 'FormingStrengthAvg', 'FormingStrengthResult',
@@ -266,8 +273,8 @@ function getInspectionItems(powderName, inspectionType) {
       {name: 'ApparentDensity', displayName: '겉보기밀도', columns: ['ApparentDensityMin', 'ApparentDensityMax'], typeColumn: 'ApparentDensityType', unit: 'g/cm³'},
       {name: 'CContent', displayName: 'C함량', columns: ['CContentMin', 'CContentMax'], typeColumn: 'CContentType', unit: '%'},
       {name: 'CuContent', displayName: 'Cu함량', columns: ['CuContentMin', 'CuContentMax'], typeColumn: 'CuContentType', unit: '%'},
-      {name: 'NiContent', displayName: 'Ni함량', columns: ['NiContentMin', 'NiContentMax'], typeColumn: 'NiContentType', unit: '%'},
-      {name: 'MoContent', displayName: 'Mo함량', columns: ['MoContentMin', 'MoContentMax'], typeColumn: 'MoContentType', unit: '%'},
+      {name: 'Moisture', displayName: '수분도', columns: ['MoistureMin', 'MoistureMax'], typeColumn: 'MoistureType', unit: '%', isWeightBased: true},
+      {name: 'Ash', displayName: '회분도', columns: ['AshMin', 'AshMax'], typeColumn: 'AshType', unit: '%', isWeightBased: true},
       {name: 'SinterChangeRate', displayName: '소결변화율', columns: ['SinterChangeRateMin', 'SinterChangeRateMax'], typeColumn: 'SinterChangeRateType', unit: '%'},
       {name: 'SinterStrength', displayName: '소결강도', columns: ['SinterStrengthMin', 'SinterStrengthMax'], typeColumn: 'SinterStrengthType', unit: 'MPa'},
       {name: 'FormingStrength', displayName: '성형강도', columns: ['FormingStrengthMin', 'FormingStrengthMax'], typeColumn: 'FormingStrengthType', unit: 'N'},
@@ -566,8 +573,8 @@ function getDecimalPlaces(itemName) {
     'ApparentDensity': 2,
     'CContent': 2,
     'CuContent': 2,
-    'NiContent': 2,
-    'MoContent': 2,
+    'Moisture': 2,
+    'Ash': 2,
     'SinterChangeRate': 2,
     'SinterStrength': 1,
     'FormingStrength': 1,
@@ -586,6 +593,16 @@ function saveInspectionItem(powderName, lotNumber, itemName, values) {
     // 겉보기밀도 전용 저장 처리 추가
     if (itemName === 'ApparentDensity') {
       return saveApparentDensityItem(powderName, lotNumber, values);
+    }
+
+    // 수분도 전용 저장 처리 추가
+    if (itemName === 'Moisture') {
+      return saveMoistureItem(powderName, lotNumber, values);
+    }
+
+    // 회분도 전용 저장 처리 추가
+    if (itemName === 'Ash') {
+      return saveAshItem(powderName, lotNumber, values);
     }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -724,10 +741,96 @@ function updateInspectionResult(rowIndex, itemName, values, average, result) {
 
       if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(parseFloat(average.toFixed(2)));
       if (resultCol > 0) sheet.getRange(rowIndex, resultCol).setValue(result);
-      
+
       return;
     }
-    
+
+    // 수분도 전용 처리
+    if (itemName === 'Moisture') {
+      // values 배열: [initialWeight1, driedWeight1, initialWeight2, driedWeight2, initialWeight3, driedWeight3]
+      for (let i = 0; i < 3; i++) {
+        const initialWeight = values[i * 2];
+        const driedWeight = values[i * 2 + 1];
+
+        const initialWeightCol = headers.indexOf('Moisture_InitialWeight' + (i + 1)) + 1;
+        if (initialWeightCol > 0) {
+          sheet.getRange(rowIndex, initialWeightCol).setValue(initialWeight || '');
+        }
+
+        const driedWeightCol = headers.indexOf('Moisture_DriedWeight' + (i + 1)) + 1;
+        if (driedWeightCol > 0) {
+          sheet.getRange(rowIndex, driedWeightCol).setValue(driedWeight || '');
+        }
+
+        // 수분도 계산: ((초기중량 - 건조후중량) / 초기중량) * 100
+        const moistureCol = headers.indexOf('Moisture' + (i + 1)) + 1;
+        if (moistureCol > 0) {
+          if (initialWeight !== '' && driedWeight !== '') {
+            const initialNum = parseFloat(initialWeight);
+            const driedNum = parseFloat(driedWeight);
+            if (!isNaN(initialNum) && !isNaN(driedNum) && initialNum > 0) {
+              const moisture = ((initialNum - driedNum) / initialNum) * 100;
+              sheet.getRange(rowIndex, moistureCol).setValue(parseFloat(moisture.toFixed(2)));
+            } else {
+              sheet.getRange(rowIndex, moistureCol).setValue('');
+            }
+          } else {
+            sheet.getRange(rowIndex, moistureCol).setValue('');
+          }
+        }
+      }
+
+      const avgCol = headers.indexOf('MoistureAvg') + 1;
+      const resultCol = headers.indexOf('MoistureResult') + 1;
+      if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(parseFloat(average.toFixed(2)));
+      if (resultCol > 0) sheet.getRange(rowIndex, resultCol).setValue(result);
+
+      return;
+    }
+
+    // 회분도 전용 처리
+    if (itemName === 'Ash') {
+      // values 배열: [initialWeight1, ashWeight1, initialWeight2, ashWeight2, initialWeight3, ashWeight3]
+      for (let i = 0; i < 3; i++) {
+        const initialWeight = values[i * 2];
+        const ashWeight = values[i * 2 + 1];
+
+        const initialWeightCol = headers.indexOf('Ash_InitialWeight' + (i + 1)) + 1;
+        if (initialWeightCol > 0) {
+          sheet.getRange(rowIndex, initialWeightCol).setValue(initialWeight || '');
+        }
+
+        const ashWeightCol = headers.indexOf('Ash_AshWeight' + (i + 1)) + 1;
+        if (ashWeightCol > 0) {
+          sheet.getRange(rowIndex, ashWeightCol).setValue(ashWeight || '');
+        }
+
+        // 회분도 계산: (회분중량 / 초기중량) * 100
+        const ashCol = headers.indexOf('Ash' + (i + 1)) + 1;
+        if (ashCol > 0) {
+          if (initialWeight !== '' && ashWeight !== '') {
+            const initialNum = parseFloat(initialWeight);
+            const ashNum = parseFloat(ashWeight);
+            if (!isNaN(initialNum) && !isNaN(ashNum) && initialNum > 0) {
+              const ash = (ashNum / initialNum) * 100;
+              sheet.getRange(rowIndex, ashCol).setValue(parseFloat(ash.toFixed(2)));
+            } else {
+              sheet.getRange(rowIndex, ashCol).setValue('');
+            }
+          } else {
+            sheet.getRange(rowIndex, ashCol).setValue('');
+          }
+        }
+      }
+
+      const avgCol = headers.indexOf('AshAvg') + 1;
+      const resultCol = headers.indexOf('AshResult') + 1;
+      if (avgCol > 0) sheet.getRange(rowIndex, avgCol).setValue(parseFloat(average.toFixed(2)));
+      if (resultCol > 0) sheet.getRange(rowIndex, resultCol).setValue(result);
+
+      return;
+    }
+
     // 기존 로직 (다른 항목들)
     const val1Col = headers.indexOf(itemName + '1') + 1;
     const val2Col = headers.indexOf(itemName + '2') + 1;
@@ -1321,6 +1424,140 @@ function deleteInspectionResult(powderName, lotNumber) {
     return {
       success: false,
       message: '삭제 중 오류가 발생했습니다: ' + error.toString()
+    };
+  }
+}
+
+// 수분도 저장 함수
+function saveMoistureItem(powderName, lotNumber, values) {
+  try {
+    // values 배열: [initialWeight1, driedWeight1, initialWeight2, driedWeight2, initialWeight3, driedWeight3]
+    const moistureValues = [];
+
+    for (let i = 0; i < 3; i++) {
+      const initialWeight = parseFloat(values[i * 2]);
+      const driedWeight = parseFloat(values[i * 2 + 1]);
+
+      if (!isNaN(initialWeight) && !isNaN(driedWeight) && initialWeight > 0) {
+        const moisture = ((initialWeight - driedWeight) / initialWeight) * 100;
+        moistureValues.push(moisture);
+      }
+    }
+
+    if (moistureValues.length === 0) {
+      return { success: false, message: '유효한 측정값이 없습니다.' };
+    }
+
+    const average = moistureValues.reduce((sum, val) => sum + val, 0) / moistureValues.length;
+    const roundedAverage = parseFloat(average.toFixed(2));
+
+    const existingInspection = getExistingInspection(powderName, lotNumber);
+    if (!existingInspection) {
+      return { success: false, message: '진행중인 검사를 찾을 수 없습니다.' };
+    }
+
+    const items = getInspectionItems(powderName, existingInspection.inspectionType);
+    const currentItem = items.find(item => item.name === 'Moisture');
+
+    let result = 'PASS';
+    if (currentItem) {
+      if (currentItem.min !== '' && roundedAverage < parseFloat(currentItem.min)) {
+        result = 'FAIL';
+      }
+      if (currentItem.max !== '' && roundedAverage > parseFloat(currentItem.max)) {
+        result = 'FAIL';
+      }
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const existingRowIndex = findExistingResultRow(powderName, lotNumber);
+
+    if (existingRowIndex > 0) {
+      updateInspectionResult(existingRowIndex, 'Moisture', values, roundedAverage, result);
+    } else {
+      createNewInspectionResult(powderName, lotNumber, 'Moisture', values, roundedAverage, result);
+    }
+
+    updateInspectionProgress(powderName, lotNumber, 'Moisture');
+
+    return {
+      success: true,
+      average: roundedAverage.toFixed(2),
+      result: result
+    };
+
+  } catch (error) {
+    Logger.log('saveMoistureItem 오류: ' + error.toString());
+    return {
+      success: false,
+      message: '저장 중 오류가 발생했습니다: ' + error.toString()
+    };
+  }
+}
+
+// 회분도 저장 함수
+function saveAshItem(powderName, lotNumber, values) {
+  try {
+    // values 배열: [initialWeight1, ashWeight1, initialWeight2, ashWeight2, initialWeight3, ashWeight3]
+    const ashValues = [];
+
+    for (let i = 0; i < 3; i++) {
+      const initialWeight = parseFloat(values[i * 2]);
+      const ashWeight = parseFloat(values[i * 2 + 1]);
+
+      if (!isNaN(initialWeight) && !isNaN(ashWeight) && initialWeight > 0) {
+        const ash = (ashWeight / initialWeight) * 100;
+        ashValues.push(ash);
+      }
+    }
+
+    if (ashValues.length === 0) {
+      return { success: false, message: '유효한 측정값이 없습니다.' };
+    }
+
+    const average = ashValues.reduce((sum, val) => sum + val, 0) / ashValues.length;
+    const roundedAverage = parseFloat(average.toFixed(2));
+
+    const existingInspection = getExistingInspection(powderName, lotNumber);
+    if (!existingInspection) {
+      return { success: false, message: '진행중인 검사를 찾을 수 없습니다.' };
+    }
+
+    const items = getInspectionItems(powderName, existingInspection.inspectionType);
+    const currentItem = items.find(item => item.name === 'Ash');
+
+    let result = 'PASS';
+    if (currentItem) {
+      if (currentItem.min !== '' && roundedAverage < parseFloat(currentItem.min)) {
+        result = 'FAIL';
+      }
+      if (currentItem.max !== '' && roundedAverage > parseFloat(currentItem.max)) {
+        result = 'FAIL';
+      }
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const existingRowIndex = findExistingResultRow(powderName, lotNumber);
+
+    if (existingRowIndex > 0) {
+      updateInspectionResult(existingRowIndex, 'Ash', values, roundedAverage, result);
+    } else {
+      createNewInspectionResult(powderName, lotNumber, 'Ash', values, roundedAverage, result);
+    }
+
+    updateInspectionProgress(powderName, lotNumber, 'Ash');
+
+    return {
+      success: true,
+      average: roundedAverage.toFixed(2),
+      result: result
+    };
+
+  } catch (error) {
+    Logger.log('saveAshItem 오류: ' + error.toString());
+    return {
+      success: false,
+      message: '저장 중 오류가 발생했습니다: ' + error.toString()
     };
   }
 }

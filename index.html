@@ -1610,6 +1610,16 @@
                 return createApparentDensityCard(item, isCompleted);
             }
 
+            // 수분도 전용 카드 생성
+            if (item.name === 'Moisture') {
+                return createMoistureCard(item, isCompleted);
+            }
+
+            // 회분도 전용 카드 생성
+            if (item.name === 'Ash') {
+                return createAshCard(item, isCompleted);
+            }
+
             // ParticleSize 전용 카드 생성
             if (item.isParticleSize) {
                 return createParticleSizeCard(item, isCompleted);
@@ -1748,8 +1758,8 @@
                 'ApparentDensity': 2,
                 'CContent': 2,
                 'CuContent': 2,
-                'NiContent': 2,
-                'MoContent': 2,
+                'Moisture': 2,
+                'Ash': 2,
                 'SinterChangeRate': 2,
                 'SinterStrength': 1,
                 'FormingStrength': 1,
@@ -1939,7 +1949,19 @@
 
             // 겉보기밀도 전용 저장 처리 추가
             if (itemName === 'ApparentDensity') {
-                saveApparentDensityItemClient(); // 함수 이름 변경
+                saveApparentDensityItemClient();
+                return;
+            }
+
+            // 수분도 전용 저장 처리 추가
+            if (itemName === 'Moisture') {
+                saveMoistureItemClient();
+                return;
+            }
+
+            // 회분도 전용 저장 처리 추가
+            if (itemName === 'Ash') {
+                saveAshItemClient();
                 return;
             }
 
@@ -2087,7 +2109,7 @@
                 'InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector',
                 'Actions',
                 'FinalResult', 'ApparentDensityResult', 'FlowRateResult', 'CContentResult',
-                'CuContentResult', 'NiContentResult', 'MoContentResult', 'ParticleSizeResult',
+                'CuContentResult', 'MoistureResult', 'AshResult', 'ParticleSizeResult',
                 'FormingLoadResult', 'FormingStrengthResult', 'SinterChangeRateResult',
                 'SinterStrengthResult'
             ];
@@ -2197,7 +2219,7 @@
                     'InspectionTime', 'InspectionType', 'PowderName', 'LotNumber', 'Inspector',
                     'Actions',
                     'FinalResult', 'ApparentDensityResult', 'FlowRateResult', 'CContentResult',
-                    'CuContentResult', 'NiContentResult', 'MoContentResult', 'ParticleSizeResult',
+                    'CuContentResult', 'MoistureResult', 'AshResult', 'ParticleSizeResult',
                     'FormingLoadResult', 'FormingStrengthResult', 'SinterChangeRateResult',
                     'SinterStrengthResult'
                 ];
@@ -2318,8 +2340,8 @@
                 'FlowRateResult': '유동도',
                 'CContentResult': 'C함량',
                 'CuContentResult': 'Cu함량',
-                'NiContentResult': 'Ni함량',
-                'MoContentResult': 'Mo함량',
+                'MoistureResult': '수분도',
+                'AshResult': '회분도',
                 'ParticleSizeResult': '입도',
                 'FormingLoadResult': '성형하중',
                 'FormingStrengthResult': '성형강도',
@@ -3152,6 +3174,364 @@
                     saveBtn.disabled = false;
                 })
                 .saveApparentDensityItem(
+                    currentInspectionData.powderName,
+                    currentInspectionData.lotNumber,
+                    values
+                );
+        }
+
+        // 수분도 전용 카드 생성
+        function createMoistureCard(item, isCompleted) {
+            const card = document.createElement('div');
+            card.className = 'inspection-card';
+            card.id = `card-${item.name}`;
+
+            const specRange = (item.min !== '' && item.max !== '') ?
+                `${item.min} ~ ${item.max}` :
+                (item.min !== '' ? `≥ ${item.min}` : `≤ ${item.max}`);
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                    <div class="spec-range">${specRange} ${item.unit}</div>
+                </div>
+
+                <div class="apparent-density-inputs">
+                    <div class="apparent-density-row">
+                        <label>1차:</label>
+                        <input type="number" step="any" id="${item.name}-initialWeight1"
+                              oninput="calculateMoisture('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="초기중량">
+                        <input type="number" step="any" id="${item.name}-driedWeight1"
+                              oninput="calculateMoisture('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="건조후중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated1">-</div>
+                    </div>
+                    <div class="apparent-density-row">
+                        <label>2차:</label>
+                        <input type="number" step="any" id="${item.name}-initialWeight2"
+                              oninput="calculateMoisture('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="초기중량">
+                        <input type="number" step="any" id="${item.name}-driedWeight2"
+                              oninput="calculateMoisture('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="건조후중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated2">-</div>
+                    </div>
+                    <div class="apparent-density-row">
+                        <label>3차:</label>
+                        <input type="number" step="any" id="${item.name}-initialWeight3"
+                              oninput="calculateMoisture('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="초기중량">
+                        <input type="number" step="any" id="${item.name}-driedWeight3"
+                              oninput="calculateMoisture('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="건조후중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated3">-</div>
+                    </div>
+                </div>
+
+                <div class="calculation-result">
+                    <div class="avg-result">
+                        <div>
+                            <strong>평균값: </strong>
+                            <span class="avg-value" id="${item.name}-avg">-</span>
+                            <span style="color: #666; font-size: 0.9em;">${item.unit}</span>
+                        </div>
+                        <div class="result-status pending" id="${item.name}-result">대기중</div>
+                    </div>
+                </div>
+
+                <button class="save-btn ${isCompleted ? 'saved' : ''}"
+                        id="${item.name}-save"
+                        onclick="saveInspectionItem('${item.name}')"
+                        ${isCompleted ? 'disabled' : ''}>
+                    ${isCompleted ? '저장완료' : '저장'}
+                </button>
+            `;
+
+            return card;
+        }
+
+        // 회분도 전용 카드 생성
+        function createAshCard(item, isCompleted) {
+            const card = document.createElement('div');
+            card.className = 'inspection-card';
+            card.id = `card-${item.name}`;
+
+            const specRange = (item.min !== '' && item.max !== '') ?
+                `${item.min} ~ ${item.max}` :
+                (item.min !== '' ? `≥ ${item.min}` : `≤ ${item.max}`);
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="item-name">${item.displayName}</div>
+                    <div class="spec-range">${specRange} ${item.unit}</div>
+                </div>
+
+                <div class="apparent-density-inputs">
+                    <div class="apparent-density-row">
+                        <label>1차:</label>
+                        <input type="number" step="any" id="${item.name}-initialWeight1"
+                              oninput="calculateAsh('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="초기중량">
+                        <input type="number" step="any" id="${item.name}-ashWeight1"
+                              oninput="calculateAsh('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="회분중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated1">-</div>
+                    </div>
+                    <div class="apparent-density-row">
+                        <label>2차:</label>
+                        <input type="number" step="any" id="${item.name}-initialWeight2"
+                              oninput="calculateAsh('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="초기중량">
+                        <input type="number" step="any" id="${item.name}-ashWeight2"
+                              oninput="calculateAsh('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="회분중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated2">-</div>
+                    </div>
+                    <div class="apparent-density-row">
+                        <label>3차:</label>
+                        <input type="number" step="any" id="${item.name}-initialWeight3"
+                              oninput="calculateAsh('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="초기중량">
+                        <input type="number" step="any" id="${item.name}-ashWeight3"
+                              oninput="calculateAsh('${item.name}')"
+                              ${isCompleted ? 'disabled' : ''} placeholder="회분중량">
+                        <div class="unit">g</div>
+                        <div class="calculated-value" id="${item.name}-calculated3">-</div>
+                    </div>
+                </div>
+
+                <div class="calculation-result">
+                    <div class="avg-result">
+                        <div>
+                            <strong>평균값: </strong>
+                            <span class="avg-value" id="${item.name}-avg">-</span>
+                            <span style="color: #666; font-size: 0.9em;">${item.unit}</span>
+                        </div>
+                        <div class="result-status pending" id="${item.name}-result">대기중</div>
+                    </div>
+                </div>
+
+                <button class="save-btn ${isCompleted ? 'saved' : ''}"
+                        id="${item.name}-save"
+                        onclick="saveInspectionItem('${item.name}')"
+                        ${isCompleted ? 'disabled' : ''}>
+                    ${isCompleted ? '저장완료' : '저장'}
+                </button>
+            `;
+
+            return card;
+        }
+
+        // 수분도 계산 함수: ((초기중량 - 건조후중량) / 초기중량) * 100
+        function calculateMoisture(itemName) {
+            const moistureValues = [];
+
+            for (let i = 1; i <= 3; i++) {
+                const initialWeight = parseFloat(document.getElementById(itemName + '-initialWeight' + i).value);
+                const driedWeight = parseFloat(document.getElementById(itemName + '-driedWeight' + i).value);
+                const calculatedDiv = document.getElementById(itemName + '-calculated' + i);
+
+                if (!isNaN(initialWeight) && !isNaN(driedWeight) && initialWeight > 0) {
+                    const moisture = ((initialWeight - driedWeight) / initialWeight) * 100;
+                    calculatedDiv.textContent = moisture.toFixed(2) + '%';
+                    moistureValues.push(moisture);
+                } else {
+                    calculatedDiv.textContent = '-';
+                }
+            }
+
+            // 평균 및 합격/불합격 판정
+            const avgSpan = document.getElementById(itemName + '-avg');
+            const resultDiv = document.getElementById(itemName + '-result');
+
+            if (moistureValues.length > 0) {
+                const average = moistureValues.reduce((sum, val) => sum + val, 0) / moistureValues.length;
+                avgSpan.textContent = average.toFixed(2);
+
+                const currentItem = currentInspectionItems.find(item => item.name === itemName);
+                if (currentItem) {
+                    let result = 'PASS';
+                    if (currentItem.min !== '' && average < parseFloat(currentItem.min)) result = 'FAIL';
+                    if (currentItem.max !== '' && average > parseFloat(currentItem.max)) result = 'FAIL';
+
+                    resultDiv.textContent = result === 'PASS' ? '합격' : '불합격';
+                    resultDiv.className = result === 'PASS' ? 'result-status pass' : 'result-status fail';
+                }
+            } else {
+                avgSpan.textContent = '-';
+                resultDiv.textContent = '대기중';
+                resultDiv.className = 'result-status pending';
+            }
+        }
+
+        // 회분도 계산 함수: (회분중량 / 초기중량) * 100
+        function calculateAsh(itemName) {
+            const ashValues = [];
+
+            for (let i = 1; i <= 3; i++) {
+                const initialWeight = parseFloat(document.getElementById(itemName + '-initialWeight' + i).value);
+                const ashWeight = parseFloat(document.getElementById(itemName + '-ashWeight' + i).value);
+                const calculatedDiv = document.getElementById(itemName + '-calculated' + i);
+
+                if (!isNaN(initialWeight) && !isNaN(ashWeight) && initialWeight > 0) {
+                    const ash = (ashWeight / initialWeight) * 100;
+                    calculatedDiv.textContent = ash.toFixed(2) + '%';
+                    ashValues.push(ash);
+                } else {
+                    calculatedDiv.textContent = '-';
+                }
+            }
+
+            // 평균 및 합격/불합격 판정
+            const avgSpan = document.getElementById(itemName + '-avg');
+            const resultDiv = document.getElementById(itemName + '-result');
+
+            if (ashValues.length > 0) {
+                const average = ashValues.reduce((sum, val) => sum + val, 0) / ashValues.length;
+                avgSpan.textContent = average.toFixed(2);
+
+                const currentItem = currentInspectionItems.find(item => item.name === itemName);
+                if (currentItem) {
+                    let result = 'PASS';
+                    if (currentItem.min !== '' && average < parseFloat(currentItem.min)) result = 'FAIL';
+                    if (currentItem.max !== '' && average > parseFloat(currentItem.max)) result = 'FAIL';
+
+                    resultDiv.textContent = result === 'PASS' ? '합격' : '불합격';
+                    resultDiv.className = result === 'PASS' ? 'result-status pass' : 'result-status fail';
+                }
+            } else {
+                avgSpan.textContent = '-';
+                resultDiv.textContent = '대기중';
+                resultDiv.className = 'result-status pending';
+            }
+        }
+
+        // 수분도 저장 함수 (클라이언트사이드)
+        function saveMoistureItemClient() {
+            const values = [];
+
+            for (let i = 1; i <= 3; i++) {
+                const initialWeight = document.getElementById('Moisture-initialWeight' + i).value;
+                const driedWeight = document.getElementById('Moisture-driedWeight' + i).value;
+                values.push(initialWeight, driedWeight);
+            }
+
+            const hasValidData = values.some(v => v !== '' && !isNaN(v));
+            if (!hasValidData) {
+                alert('최소 1개 이상의 측정값을 입력해주세요.');
+                return;
+            }
+
+            const saveBtn = document.getElementById('Moisture-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장중...';
+            saveBtn.disabled = true;
+
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        saveBtn.textContent = '저장완료';
+                        saveBtn.className = 'save-btn saved';
+
+                        for (let i = 1; i <= 3; i++) {
+                            document.getElementById('Moisture-initialWeight' + i).disabled = true;
+                            document.getElementById('Moisture-driedWeight' + i).disabled = true;
+                        }
+
+                        if (!completedItems.includes('Moisture')) {
+                            completedItems.push('Moisture');
+                        }
+
+                        updateInspectionProgress();
+                        alert('저장되었습니다.');
+
+                        if (completedItems.length === currentInspectionItems.length) {
+                            if (confirm('모든 검사 항목이 완료되었습니다. 대시보드로 돌아가시겠습니까?')) {
+                                showPage('dashboard');
+                                loadIncompleteInspections();
+                            }
+                        }
+                    } else {
+                        alert(result ? result.message : '저장 실패');
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('저장 중 오류가 발생했습니다: ' + error.toString());
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                })
+                .saveMoistureItem(
+                    currentInspectionData.powderName,
+                    currentInspectionData.lotNumber,
+                    values
+                );
+        }
+
+        // 회분도 저장 함수 (클라이언트사이드)
+        function saveAshItemClient() {
+            const values = [];
+
+            for (let i = 1; i <= 3; i++) {
+                const initialWeight = document.getElementById('Ash-initialWeight' + i).value;
+                const ashWeight = document.getElementById('Ash-ashWeight' + i).value;
+                values.push(initialWeight, ashWeight);
+            }
+
+            const hasValidData = values.some(v => v !== '' && !isNaN(v));
+            if (!hasValidData) {
+                alert('최소 1개 이상의 측정값을 입력해주세요.');
+                return;
+            }
+
+            const saveBtn = document.getElementById('Ash-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장중...';
+            saveBtn.disabled = true;
+
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result && result.success) {
+                        saveBtn.textContent = '저장완료';
+                        saveBtn.className = 'save-btn saved';
+
+                        for (let i = 1; i <= 3; i++) {
+                            document.getElementById('Ash-initialWeight' + i).disabled = true;
+                            document.getElementById('Ash-ashWeight' + i).disabled = true;
+                        }
+
+                        if (!completedItems.includes('Ash')) {
+                            completedItems.push('Ash');
+                        }
+
+                        updateInspectionProgress();
+                        alert('저장되었습니다.');
+
+                        if (completedItems.length === currentInspectionItems.length) {
+                            if (confirm('모든 검사 항목이 완료되었습니다. 대시보드로 돌아가시겠습니까?')) {
+                                showPage('dashboard');
+                                loadIncompleteInspections();
+                            }
+                        }
+                    } else {
+                        alert(result ? result.message : '저장 실패');
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    alert('저장 중 오류가 발생했습니다: ' + error.toString());
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                })
+                .saveAshItem(
                     currentInspectionData.powderName,
                     currentInspectionData.lotNumber,
                     values
