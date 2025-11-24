@@ -132,12 +132,12 @@ function initializeSheets() {
       'SinterStrength1', 'SinterStrength2', 'SinterStrength3', 'SinterStrengthAvg', 'SinterStrengthResult',
       'FormingStrength1', 'FormingStrength2', 'FormingStrength3', 'FormingStrengthAvg', 'FormingStrengthResult',
       'FormingLoad1', 'FormingLoad2', 'FormingLoad3', 'FormingLoadAvg', 'FormingLoadResult',
-      'ParticleSize80_1', 'ParticleSize80_2', 'ParticleSize80_Avg', 'ParticleSize80_Result',
-      'ParticleSize100_1', 'ParticleSize100_2', 'ParticleSize100_Avg', 'ParticleSize100_Result',
+      'ParticleSize180_1', 'ParticleSize180_2', 'ParticleSize180_Avg', 'ParticleSize180_Result',
       'ParticleSize150_1', 'ParticleSize150_2', 'ParticleSize150_Avg', 'ParticleSize150_Result',
-      'ParticleSize200_1', 'ParticleSize200_2', 'ParticleSize200_Avg', 'ParticleSize200_Result',
-      'ParticleSize325_1', 'ParticleSize325_2', 'ParticleSize325_Avg', 'ParticleSize325_Result',
-      'ParticleSize325M_1', 'ParticleSize325M_2', 'ParticleSize325M_Avg', 'ParticleSize325M_Result',
+      'ParticleSize106_1', 'ParticleSize106_2', 'ParticleSize106_Avg', 'ParticleSize106_Result',
+      'ParticleSize75_1', 'ParticleSize75_2', 'ParticleSize75_Avg', 'ParticleSize75_Result',
+      'ParticleSize45_1', 'ParticleSize45_2', 'ParticleSize45_Avg', 'ParticleSize45_Result',
+      'ParticleSize45M_1', 'ParticleSize45M_2', 'ParticleSize45M_Avg', 'ParticleSize45M_Result',
       'ParticleSizeResult',
       'FinalResult'
     ];
@@ -162,18 +162,18 @@ function initializeSheets() {
     
     // 샘플 데이터 추가
     const sampleParticleData = [
-      ['ABC-100', '+80#', 5.0, 10.0],
-      ['ABC-100', '+100#', 10.0, 15.0],
-      ['ABC-100', '+150#', 15.0, 20.0],
-      ['ABC-100', '+200#', 20.0, 25.0],
-      ['ABC-100', '+325#', 15.0, 20.0],
-      ['ABC-100', '-325#', 10.0, 15.0],
-      ['DEF-200', '+80#', 3.0, 8.0],
-      ['DEF-200', '+100#', 8.0, 12.0],
-      ['DEF-200', '+150#', 12.0, 18.0],
-      ['DEF-200', '+200#', 18.0, 23.0],
-      ['DEF-200', '+325#', 12.0, 18.0],
-      ['DEF-200', '-325#', 8.0, 12.0]
+      ['ABC-100', '+180 um', 5.0, 10.0],
+      ['ABC-100', '+150 um', 10.0, 15.0],
+      ['ABC-100', '+106 um', 15.0, 20.0],
+      ['ABC-100', '+75 um', 20.0, 25.0],
+      ['ABC-100', '+45 um', 15.0, 20.0],
+      ['ABC-100', '-45 um', 10.0, 15.0],
+      ['DEF-200', '+180 um', 3.0, 8.0],
+      ['DEF-200', '+150 um', 8.0, 12.0],
+      ['DEF-200', '+106 um', 12.0, 18.0],
+      ['DEF-200', '+75 um', 18.0, 23.0],
+      ['DEF-200', '+45 um', 12.0, 18.0],
+      ['DEF-200', '-45 um', 8.0, 12.0]
     ];
     particleSizeSheet.getRange(2, 1, sampleParticleData.length, sampleParticleData[0].length).setValues(sampleParticleData);
   }
@@ -1090,12 +1090,12 @@ function updateParticleSizeResult(rowIndex, particleData, overallResult) {
     
     // 각 MESH별 데이터 저장
     const meshMapping = {
-      '80': 'ParticleSize80',
-      '100': 'ParticleSize100', 
+      '180': 'ParticleSize180',
       '150': 'ParticleSize150',
-      '200': 'ParticleSize200',
-      '325': 'ParticleSize325',
-      '325M': 'ParticleSize325M'
+      '106': 'ParticleSize106',
+      '75': 'ParticleSize75',
+      '45': 'ParticleSize45',
+      '45M': 'ParticleSize45M'
     };
     
     Object.keys(meshMapping).forEach(meshId => {
