@@ -2963,12 +2963,12 @@
                 const resultClass = result === 'PASS' ? 'pass' : (result === 'FAIL' ? 'fail' : '');
                 const resultText = result === 'PASS' ? '합격' : (result === 'FAIL' ? '불합격' : '대기중');
                 
-                // MESH 이름 표시 개선
+                // MESH 이름 표시 개선 (um 단위로 변경)
                 let meshDisplayName = '';
-                if (meshId === '325M') {
-                    meshDisplayName = '-325#';
+                if (meshId === '45M') {
+                    meshDisplayName = '-45 um';
                 } else {
-                    meshDisplayName = `+${meshId}#`;
+                    meshDisplayName = `+${meshId} um`;
                 }
                 
                 // 해당 MESH의 규격 정보 찾기 (실제 구현에서는 별도 함수 필요)
