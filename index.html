@@ -2997,21 +2997,25 @@
                 } else {
                     meshDisplayName = `+${meshId} um`;
                 }
-                
-                // 해당 MESH의 규격 정보 찾기 (실제 구현에서는 별도 함수 필요)
-                let meshSpec = '';
-                // particleSizeSpecs에서 해당 MESH 규격 찾기
-                
+
+                // 해당 MESH의 규격 정보 찾기
+                let meshSpecText = '';
+                if (inspectionData.particleSizeSpecs && inspectionData.particleSizeSpecs.length > 0) {
+                    const spec = inspectionData.particleSizeSpecs.find(s => s.meshSize === meshDisplayName);
+                    if (spec) {
+                        meshSpecText = `${spec.min} ~ ${spec.max} %`;
+                    }
+                }
+
                 meshResults += `
                     <div class="mesh-group">
                         <div class="mesh-header">
                             <span class="mesh-name">${meshDisplayName}</span>
-                            <span class="mesh-spec">
-                                평균: ${avg || '-'}%
-                                ${meshSpec ? `<span style="margin-left: 10px; color: #666; font-size: 0.8em;">(${meshSpec})</span>` : ''}
+                            <span class="mesh-spec" style="color: #007bff; font-weight: 500;">
+                                ${meshSpecText ? `규격: ${meshSpecText}` : '규격 없음'}
                             </span>
                         </div>
-                        
+
                         <div class="detail-measurement-values">
                             <div class="detail-value-item">
                                 <div class="detail-value-label">1회 측정</div>
@@ -3021,8 +3025,12 @@
                                 <div class="detail-value-label">2회 측정</div>
                                 <div class="detail-value-number">${val2 || '-'}%</div>
                             </div>
+                            <div class="detail-value-item">
+                                <div class="detail-value-label">평균</div>
+                                <div class="detail-value-number" style="font-weight: bold;">${avg || '-'}%</div>
+                            </div>
                         </div>
-                        
+
                         <div class="mesh-result">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                                 <span style="font-weight: bold; color: #495057;">결과:</span>

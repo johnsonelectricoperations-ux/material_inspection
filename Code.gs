@@ -1289,7 +1289,13 @@ function getInspectionDetail(powderName, lotNumber) {
         if (powderSpec) {
           result.powderSpec = powderSpec;
         }
-        
+
+        // 입도분석 규격 정보 추가
+        const particleSizeSpecs = getParticleSizeSpec(powderName);
+        if (particleSizeSpecs && particleSizeSpecs.length > 0) {
+          result.particleSizeSpecs = particleSizeSpecs;
+        }
+
         return { success: true, data: result };
       }
     }
